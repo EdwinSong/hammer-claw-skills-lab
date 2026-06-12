@@ -6,6 +6,7 @@
   "metadata": {
     "cap_groups": ["cap_lua"],
     "manage_mode": "web",
+    "devices": ["universal"],
     "category": ["game"],
     "peripherals": ["display"],
     "tags": ["imu", "ball", "tilt", "balance"]

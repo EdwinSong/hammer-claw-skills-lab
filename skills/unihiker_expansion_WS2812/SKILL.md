@@ -10,6 +10,7 @@
       "peripherals": ["ws2812", "led"],
       "cap_groups": ["cap_lua"],
       "manage_mode": "web"
+    "devices": ["universal"],
     }
 }
 ---

@@ -9,6 +9,7 @@
       "peripherals": ["display"],
       "cap_groups": ["cap_lua", "cap_http_request", "cap_time"],
       "manage_mode": "web"
+    "devices": ["universal"],
     }
 }
 ---

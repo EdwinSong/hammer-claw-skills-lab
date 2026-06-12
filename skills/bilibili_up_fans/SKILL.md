@@ -9,6 +9,7 @@
       "tags": ["bilibili", "fans", "info"],
       "cap_groups": ["cap_lua", "cap_web_search"],
       "manage_mode": "web"
+    "devices": ["universal"],
     }
 }
 ---

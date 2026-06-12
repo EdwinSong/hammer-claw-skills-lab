@@ -6,6 +6,7 @@
   "metadata": {
     "cap_groups": ["cap_lua", "cap_im_wechat", "cap_im_local"],
     "manage_mode": "web",
+    "devices": ["universal"],
     "category": ["media"],
     "peripherals": ["camera"],
     "tags": ["motion", "intrusion", "monitoring"]

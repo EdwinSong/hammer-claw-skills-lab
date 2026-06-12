@@ -10,6 +10,7 @@
       "peripherals": ["ir"],
       "cap_groups": ["cap_lua"],
       "manage_mode": "web"
+    "devices": ["universal"],
     }
 }
 ---

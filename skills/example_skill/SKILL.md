@@ -7,6 +7,7 @@
     {
       "cap_groups": ["cap_time", "cap_web_search"],
       "manage_mode": "web",
+    "devices": ["universal"],
       "category": ["utility"],
       "peripherals": ["gpio"],
       "tags": ["example", "demo"]
