@@ -1,19 +1,19 @@
-# BC08-P4 Device-Side Skills Marketplace — Detailed Design Specification
+# BC08-P4 On-Device Skills Marketplace — Design Specification
 
-> Phase 2 Planning Document. This document defines the complete layout, data structures, state machine, and C APIs for the LVGL C native Skills Marketplace. **No code implementation yet.**
+> Phase 2 planning document. Defines the LVGL native skills marketplace page: interaction model, data structures, state machine, and API requirements. **Implementation deferred.**
 
 ---
 
-## 1. Page Positioning
+## 1. Page Identity
 
-| Attribute | Value |
-|------|-----|
-| **Page Index** | Page 4 (Factory Native C page, cannot be overridden by user Lua scripts) |
-| **Rendering Engine** | LVGL C Native (Ensuring performance, stability, and tamper-proof safety) |
-| **Bottom Bar Entry** | 🛒 (Market) Icon (Direct shortcut or bottom navigation) |
-| **Compilation** | Built-in firmware, compiled alongside BC08 |
+| Property | Value |
+|----------|-------|
+| **Page Number** | Page 7 (factory page, not overwritable by user Lua) |
+| **Render Engine** | LVGL C native (performance + immutability) |
+| **Bottom Bar Icon** | 🛒 |
+| **Build Method** | Compiled into firmware, shipped with BC08 releases |
 
-Pages 1 to 3 are native miner UI pages (Dashboard, Settings, Network). Page 4 is the native Skills Marketplace (🛒). Pages 5 to 7 are reserved for custom sandbox-rendered Lua screens.
+Pages 4-6 remain for user-custom Lua pages. Page 7 is the factory skills marketplace.
 
 ---
 
@@ -23,11 +23,11 @@ Pages 1 to 3 are native miner UI pages (Dashboard, Settings, Network). Page 4 is
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  Compile-time (Firmware Embedded)                │
+│  Build Time (embedded in firmware)                │
 │  ┌──────────────────────────────────────────┐    │
 │  │ skills-data.json  (EMBED_FILES)           │    │
-│  │  ├── skills[]         Skill metadata (static) │    │
-│  │  └── tags_index{}     Category indexes     │    │
+│  │  ├── skills[]         Static metadata     │    │
+│  │  └── tags_index{}     Category/tag index  │    │
 │  └──────────────────────────────────────────┘    │
 │  ┌──────────────────────────────────────────┐    │
 │  │ covers/              (EMBED_FILES)         │    │
@@ -36,155 +36,137 @@ Pages 1 to 3 are native miner UI pages (Dashboard, Settings, Network). Page 4 is
 │  └──────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────┘
          │
-         ▼  Runtime Dynamic State Checks
+         ▼  Runtime dynamic data
 ┌──────────────────────────────────────────────────┐
-│  FATFS Filesystem Checks                         │
-│  ├── /fatfs/skills/<id>/SKILL.md  exists -> Installed
-│  ├── /fatfs/ui/ui_page_5.lua      exists -> Custom Page
-│  └── FATFS remaining space -> Disk space indicator
+│  FATFS filesystem checks                          │
+│  ├── /fatfs/skills/<id>/SKILL.md  exists → installed│
+│  ├── /fatfs/ui/ui_page_*.lua      exists → custom │
+│  └── fatfs free space → capacity indicator         │
 └──────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Data Structures
 
 ```c
-// Skill metadata and runtime state (merged in memory)
+// Skill card (runtime merge of static metadata + dynamic install state)
 typedef struct {
     char id[64];             // "miner_dashboard"
     char title[64];          // "Miner Dashboard"
-    char description[256];   // Brief summary / description of the skill
+    char description[256];   // One-line description
     char author[64];         // Author name
-    uint32_t total_size;     // Total install size in bytes
-    bool featured;           // Highlighted/Featured flag
+    uint32_t total_size;     // Total size in bytes
+    bool featured;           // Featured flag
     uint8_t category;        // CAT_MINING / CAT_GAME / CAT_UTILITY / CAT_AI
-    char download_url[256];  // Download URL link for the skill zip/tar bundle
-    char sha256[65];         // SHA256 checksum for verification
-    // Runtime status
-    bool installed;          // FATFS status check result
-    uint8_t install_state;   // INSTALL_NONE / DOWNLOADING / VERIFYING / INSTALLING / INSTALLED
-    uint8_t download_progress; // Real-time percentage progress (0-100)
+    // Runtime state
+    bool installed;          // FATFS detection result
+    uint8_t install_state;   // INSTALL_NONE / DOWNLOADING / INSTALLING / INSTALLED
+    uint8_t download_progress; // 0-100
 } skill_card_t;
 
-// Filter categories
+// Category enum
 typedef enum {
     CAT_ALL = 0,
     CAT_MINING,
     CAT_GAME,
     CAT_UTILITY,
     CAT_AI,
-    CAT_INSTALLED,  // "Installed" filter category replacing "My"
+    CAT_MY,        // "My Skills" — installed + custom pages
     CAT_COUNT
 } category_t;
 
-// Custom Lua page entry
+// Custom page entry
 typedef struct {
-    uint8_t page_id;         // 5-7
-    char name[64];           // Extracted from script metadata
+    uint8_t page_id;         // 4-7
+    char name[64];           // Extracted from filename
     uint32_t size;           // File size
-    bool active;             // Whether the script file exists
+    bool active;             // Whether file exists
 } custom_page_t;
 ```
 
 ---
 
-## 3. UI Layout
+## 3. Page Layout
 
 ### 3.1 Overall Structure
 
-All text display is strictly in **English** only. No Chinese characters are supported or displayed.
-
 ```
 ┌──────────────────────────────────────┐  y=0
-│  🔨 Hammer Skills Lab                │  ← Top Bar h=58
+│  🔨 Hammer Skills Lab                │  ← Top bar h=58
 │  ─────────────────────────────────── │
-│  [All][Mining][Game][Utility][AI][Installed] ← Category Tabs h=44
+│  [All][⛏Mining][🎮Games][🔧Tools][🤖AI][📄My]│  ← Category tabs h=44
 │                                      │
 │  ┌────────────────────────────────┐  │
 │  │ 📦 Cover (80x80)               │  │
-│  │                                │  │  ← Skill Card h=100
-│  │ Miner Dashboard                │  │     Scrollable List
-│  │ Real-time Hashrate telemetry   │  │
-│  │ 18.5 KB      [Install]         │  │
+│  │                                │  │  ← Skill card h=100
+│  │ Miner Dashboard                │  │     Scrollable list
+│  │ Real-time hashrate/temp panel  │  │
+│  │ 18.5 KB      [Install →]      │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
 │  │ 🎮 Cover                       │  │
 │  │ Flappy Bird                    │  │
-│  │ Retro bird flying game         │  │
-│  │ 18.7 KB      [Uninstall]       │  │
+│  │ Classic side-scroll flyer      │  │
+│  │ 18.7 KB      [✅ Installed]    │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
 │  │ ...                            │  │  ← More cards...
 │  └────────────────────────────────┘  │
 │                                      │
 │  ─────────────────────────────────── │
-│  Free space: ████████░░ 8.2MB/10MB   │  ← Capacity indicator h=36
-│  [Home][Network][Setting][🛒Market]   │  ← Bottom bar (Normal Mode) h=58
+│  Free: ████████░░ 8.2MB/10MB        │  ← Capacity indicator h=36
+│  [Home][Settings][Network][Custom][🛒Mkt]│  ← Bottom bar h=58
 └──────────────────────────────────────┘  y=1280
 ```
 
-#### Bottom Bar States:
-* **Normal Mode (Pages 1-4)**: Shows the standard 4 navigation buttons: `[Home] [Network] [Setting] [🛒Market]`. Clicking `[🛒Market]` switches directly to Page 4 (Marketplace).
-* **Claw Mode (Lua Custom Sandbox Pages 5-7)**: Bottom bar dynamically switches to:
-  `[Home]                     [🛒Market][◀][▶]`
-  Adding the `[🛒Market]` button before the left/right page cycling arrows allows users to jump back to the Marketplace directly from any custom page.
-
-### 3.2 Card Layout Details
-
-Each card must display the title, author, total size, featured badge, and a **brief summary (description)** of the skill.
+### 3.2 Card Layout Detail
 
 ```
 ┌──────────────────────────────────────────────┐
 │ ┌────────┐                                   │
-│ │        │  Miner Dashboard       ⛏ Featured  │  ← Title + Featured Badge
-│ │  COVER │  Real-time Hashrate telemetry     │  ← Summary / Description (2 lines)
+│ │        │  Miner Dashboard          ⛏ Featured│  ← Title + featured badge
+│ │  COVER │  Real-time hashrate/temp panel    │  ← Description (2 lines)
 │ │  80x80 │  Author: HammerMiner              │  ← Author
-│ │        │  18.5 KB          [ Install ]     │  ← Size + Action Button
+│ │        │  18.5 KB          [ Install → ]   │  ← Size + button
 │ └────────┘                                   │
 └──────────────────────────────────────────────┘
 
-Interactive Behavior:
-  - Clicking anywhere on the card body of an INSTALLED skill directly runs it (launches page/registers tool).
-  - Clicking the action button triggers installation or uninstallation actions.
-
-Button States:
-  - [ Install ]     Gray background + blue icon       ← Not installed
-  - [ Installing ]  Orange background + progress bar   ← Real-time download progress bar
-  - [ Uninstall ]   Green background + white check     ← Installed (clicks trigger uninstall popup)
-  - [ Low Space ]   Red background                     ← Insufficient disk space
+Button states:
+  [ Install → ]     Gray bg + blue arrow      ← Not installed
+  [ ⏳ Downloading ] Orange bg + progress bar   ← Downloading
+  [ ✅ Installed ]   Green bg + checkmark      ← Installed (tap to uninstall)
+  [ ❌ No Space ]    Red bg                    ← Insufficient space
 ```
 
-### 3.3 "[Installed]" Category Layout
-
-Shows currently installed skills and custom Lua pages side by side for easy launch and maintenance.
+### 3.3 "📄 My Skills" Tab Layout
 
 ```
 ┌──────────────────────────────────────┐
 │  Installed Skills                     │
 │  ┌────────────────────────────────┐  │
-│  │ Miner Dashboard    [Uninstall] │  │ (Clicking card body runs it)
-│  │ 18.5 KB                        │  │
+│  │ Miner Dashboard   ✅ Installed │  │
+│  │ 18.5 KB          [Uninstall]  │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
-│  │ Flappy Bird        [Uninstall] │  │
-│  │ 18.7 KB                        │  │
+│  │ Flappy Bird       ✅ Installed │  │
+│  │ 18.7 KB          [Uninstall]  │  │
 │  └────────────────────────────────┘  │
 │                                      │
 │  Custom Pages                         │
 │  ┌────────────────────────────────┐  │
-│  │ Page 5: Minesweeper            │  │
-│  │ /fatfs/ui/ui_page_5.lua        │  │
-│  │ 5.2 KB           [Preview]     │  │
+│  │ Page 4: Minesweeper            │  │
+│  │ /fatfs/ui/ui_page_4.lua       │  │
+│  │ 5.2 KB          [▶ Preview]   │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
-│  │ Page 6: Calendar               │  │
-│  │ /fatfs/ui/ui_page_6.lua        │  │
-│  │ 8.1 KB           [Preview]     │  │
+│  │ Page 5: Calendar               │  │
+│  │ /fatfs/ui/ui_page_5.lua       │  │
+│  │ 8.1 KB          [▶ Preview]   │  │
 │  └────────────────────────────────┘  │
 │  ┌────────────────────────────────┐  │
-│  │ [+ Create Custom Page...]       │  │  ← Triggers WebIM code generator
+│  │ [+ Create New Custom Page...]  │  │  ← Opens WebIM for AI generation
 │  └────────────────────────────────┘  │
 │                                      │
-│  Free space: ████████░░ 8.2MB/10MB   │
+│  Free: ████████░░ 8.2MB/10MB        │
 └──────────────────────────────────────┘
 ```
 
@@ -192,43 +174,36 @@ Shows currently installed skills and custom Lua pages side by side for easy laun
 
 ## 4. State Machine
 
-### 4.1 Skill Installation State Machine
+### 4.1 Skill Install State Machine
 
 ```
                     ┌─────────┐
-        Enter Page    │  IDLE   │
-       ┌───────────→│         │←──────────────────────┐
-       │            └────┬────┘                       │
-       │                 │ Click [Install]            │
-       │                 ▼                             │
-       │            ┌─────────┐                       │
-       │            │ SPACE   │─────→ Popup Alert      │
-       │            │ _CHECK  │      "Low space, need X MB"
-       │            └────┬────┘                       │
-       │             Space OK │                          │
-       │                 ▼                             │
-       │            ┌─────────┐                       │
-       │  Refresh   │DOWNLOAD │                       │
-       │  Progress  │ _ING    │                       │
-       │  Bar       └────┬────┘                       │
-       │             Download │                          │
-       │             Complete │                          │
-       │                 ▼                             │
-       │            ┌─────────┐                       │
-       │            │ VERIFY  │─────→ Verify Failed    │
-       │            │ _ING    │       (Hash mismatch) │
-       │            └────┬────┘                       │
-       │             Verify OK│                          │
-       │                 ▼                             │
-       │            ┌─────────┐                       │
-       │            │INSTALL  │───────────────────────┤ (Write/Unzip Failed)
-       │            │ _ING    │                       │
-       │            └────┬────┘                       │
-       │             Write OK │                       │
-       │                 ▼                             │
-       │            ┌─────────┐                       │
-       │            │INSTALLED│  Click [Uninstall]    │
-       └───────────│         │──────────→ Confirm Popup ┘
+        enter detail  │  IDLE   │
+       ┌───────────→│         │←──────────┐
+       │            └────┬────┘           │
+       │                 │ tap [Install]    │ no space / failure
+       │                 ▼                 │
+       │            ┌─────────┐           │
+       │            │ SPACE   │─────→ Dialog:
+       │            │ _CHECK  │      "Need X MB, available Y MB"
+       │            └────┬────┘           │
+       │           enough │               │
+       │                 ▼                 │
+       │            ┌─────────┐           │
+       │  progress   │DOWNLOAD │           │
+       │  ←────────│ _ING    │           │
+       │            └────┬────┘           │
+       │          complete │              │
+       │                 ▼                 │
+       │            ┌─────────┐   fail    │
+       │            │INSTALL  │───────────┘
+       │            │ _ING    │
+       │            └────┬────┘
+       │           written │
+       │                 ▼
+       │            ┌─────────┐
+       │            │INSTALLED│  tap [Uninstall]
+       └───────────│         │──────────→ Confirm dialog → delete files → IDLE
                     └─────────┘
 ```
 
@@ -242,9 +217,9 @@ esp_err_t check_space_before_install(skill_card_t *skill) {
     if (free_kb < need_kb) {
         char msg[128];
         snprintf(msg, sizeof(msg),
-            "Insufficient Space!\nNeed: %llu KB\nAvailable: %llu KB\nPlease delete some skills and try again.",
+            "Insufficient space!\nRequired: %llu KB\nAvailable: %llu KB\nUninstall other skills and retry.",
             need_kb, free_kb);
-        show_dialog("Insufficient Space", msg, DIALOG_OK);
+        show_dialog("No Space", msg, DIALOG_OK);
         return ESP_ERR_NO_MEM;
     }
     return ESP_OK;
@@ -255,61 +230,57 @@ esp_err_t check_space_before_install(skill_card_t *skill) {
 
 ## 5. Cover Image Strategy
 
-### 5.1 Three-Level Fallback
+### 5.1 Three-Tier Approach
 
-| Level | Source | Pros | Cons |
-|------|------|------|------|
-| **Level A** | Built-in asset inside `skills-data.json` (base64) or embedded flash | Offline ready, zero latency | Increases binary size |
-| **Level B** | GitHub Raw lazy-load, downloaded and cached to `/fatfs/cache/` | No flash consumption | Slow first load, needs Internet |
-| **Level C** | Colored block placeholder with Emoji / Title | Zero dependency, instant | Less aesthetic |
+| Tier | Source | Pros | Cons |
+|------|--------|------|------|
+| **A** | Skill's own `assets/cover.png`, base64-embedded in skills-data.json | Offline, zero latency | Increases firmware size |
+| **B** | GitHub raw lazy-load, cache to `/fatfs/cache/` on first view | No firmware bloat | Slow first load, needs network |
+| **C** | Category-colored placeholder + icon text (fallback) | Zero dependency | Not "premium" looking |
 
-### 5.2 Recommended Strategy: Level B + Level C Fallback
+### 5.2 Recommended: Tier B with C fallback
 
 ```
-First load of Marketplace:
-  ① Render Level C placeholder (Category color + generic icon)
-  ② Start background download of PNG cover (80x80 px)
-  ③ Replace placeholder when download completes
-  ④ Cache it to: /fatfs/cache/covers/<skill_id>.png
-  
-Subsequent loads:
-  ① Check cache. If found, display immediately.
-  ② Fall back to network download only on cache miss.
+First open of marketplace:
+  ① Show Tier C placeholder (category color block + emoji)
+  ② Async download cover PNG (80x80) in background
+  ③ Replace placeholder on download complete
+  ④ Cache to /fatfs/cache/covers/<skill_id>.png
+
+Subsequent opens:
+  ① Check cache first, display if exists
+  ② Fall back to network if cache miss
 ```
 
-### 5.3 Cover Specifications & Cache Eviction
+### 5.3 Cover Specs
 
 ```
 Dimensions: 80x80 px
-Format: PNG (RGBA8888, decoded via lodepng — supported by BC08)
-Size: < 5KB per cover
-Cache Path: /fatfs/cache/covers/<skill_id>.png
-Max Cache Size: 32 covers (≈160KB)
+Format: PNG (RGBA8888, lodepng decode — BC08 already supports)
+Max size: < 5KB per image
+Cache path: /fatfs/cache/covers/<skill_id>.png
+Max cached: 32 images (≈160KB)
 ```
-
-**Cache Eviction Policy (LRU)**:
-- **Condition 1 (Limit Reached)**: When downloading a new cover and the cache folder reaches 32 covers, the system deletes the Least Recently Used (LRU) cover file.
-- **Condition 2 (Low Storage)**: When FATFS remaining space drops below 256KB, the system automatically purges the entire cover cache folder `/fatfs/cache/covers/*`.
 
 ---
 
-## 6. Storage Space Management
+## 6. Storage Management
 
 ### 6.1 Partition Layout
 
 ```
 FATFS (esp_claw partition): 2MB (0x200000 bytes)
 ├── skills/         ← Installed skills
-├── ui/             ← Custom sandbox page scripts
-├── sessions/       ← LLM chat logs
-├── memory/         ← LLM long-term memory
-├── cache/          ← Cover cache
-├── router_rules/   ← Event router configurations
-├── scheduler/      ← Scheduler rules
-└── scripts/        ← Helper scripts
+├── ui/             ← Custom page Lua scripts
+├── sessions/       ← Chat history
+├── memory/         ← AI memory
+├── cache/          ← Cover image cache
+├── router_rules/   ← Event routing
+├── scheduler/      ← Scheduled tasks
+└── scripts/        ← Other Lua scripts
 ```
 
-### 6.2 Disk Space Indicator Logic
+### 6.2 Capacity Indicator
 
 ```c
 #define FATFS_TOTAL_KB  (2 * 1024)  // 2MB
@@ -317,12 +288,12 @@ FATFS (esp_claw partition): 2MB (0x200000 bytes)
 void update_space_indicator(lv_obj_t *bar, lv_obj_t *label) {
     uint64_t free_bytes = fatfs_get_free_space("/fatfs");
     uint64_t used_kb = FATFS_TOTAL_KB - (free_bytes / 1024);
-    
+
     lv_bar_set_value(bar, (int)(used_kb * 100 / FATFS_TOTAL_KB), LV_ANIM_ON);
-    lv_label_set_text_fmt(label, "Free: %llu KB / %d KB", 
+    lv_label_set_text_fmt(label, "Free: %llu KB / %d KB",
                           free_bytes / 1024, FATFS_TOTAL_KB);
-    
-    // Change bar color to red if available space is under 256KB
+
+    // Red warning below 256KB
     if (free_bytes < 256 * 1024) {
         lv_obj_set_style_bg_color(bar, lv_color_hex(0xFF4444), LV_PART_INDICATOR);
     }
@@ -331,242 +302,184 @@ void update_space_indicator(lv_obj_t *bar, lv_obj_t *label) {
 
 ---
 
-## 7. Custom UI Sandbox Directory (Pages 5-7)
+## 7. Custom Pages Section (📄 My Skills)
 
-### 7.1 Separation of Storage
-
-Page 4 is native C. Custom screens use slots 5 to 7.
+### 7.1 Storage Separation
 
 ```
 /fatfs/
-├── skills/              ← Skill packages (managed by downloader)
+├── skills/              ← Skill install directory (skills_lab_downloader managed)
 │   ├── flappybird/
 │   └── miner_dashboard/
 │
-└── ui/                  ← Custom sandbox screens (AI generated / user modified)
-    ├── ui_page_4.lua    ← Reserved (No longer used, Page 4 is C Native)
-    ├── ui_page_5.lua    ← Minesweeper UI
-    ├── ui_page_6.lua    ← Calendar UI
-    └── ui_page_7.lua    ← Custom Image Viewer UI
+└── ui/                  ← Custom page directory (AI-generated + user-edited)
+    ├── ui_page_4.lua    ← Minesweeper
+    ├── ui_page_5.lua    ← Calendar
+    ├── ui_page_6.lua    ← Image viewer
+    └── ui_page_7.lua    ← Reserved (skills marketplace, not for customization)
 ```
 
-### 7.2 Custom Page Creation
+### 7.2 Create Custom Page Flow
 
 ```
-User → Clicks [+ Create Custom Page...]
-     → Input Popup: "Describe the page you want to build..."
-     → Triggers WebIM → LLM generates Lua code
-     → LLM writes to `/fatfs/ui/ui_page_X.lua` (where X is 5, 6, or 7)
-     → UI lists refresh automatically
-     → User clicks [Preview] to preview the screen
+User → Tap [+ Create New Custom Page...]
+     → Dialog: "Describe the page you want..."
+     → Backend: Call WebIM → LLM generates Lua code
+     → LLM writes /fatfs/ui/ui_page_X.lua
+     → Auto-refresh page list on write complete
+     → User can tap [▶ Preview] to navigate to the page
 ```
 
-### 7.3 Custom Page Metadata Header
+### 7.3 Custom Page Metadata
 
-Metadata is placed in comments at the top of the Lua script:
+Convention: header comments in Lua script:
 
 ```lua
--- @name Minesweeper
--- @desc Retro minesweeper game with 3 difficulty settings
--- @author AI Assistant
+-- @name Hashrate Dashboard
+-- @desc Real-time hashrate curve, temperature, fan speed
+-- @author User
 -- @version 1.0
--- @icon game
+-- @icon hashrate
 ```
 
-### 7.4 Custom Page Management Actions
+The marketplace parses these comments for display names and descriptions.
+
+### 7.4 Custom Page Management
 
 ```
-Available actions:
-  [Preview]     → claw.display.change_page(page_id)
-  [Edit]        → Triggers WebIM request: "Edit ui_page_X.lua according to user prompt"
-  [Delete]      → Confirms deletion → unlink(/fatfs/ui/ui_page_X.lua)
-  [View Code]   → Triggers WebIM view: dumps script content
+Actions:
+  [▶ Preview]     → claw.display.change_page(page_id)
+  [✏ Edit]        → Open WebIM, tell LLM "modify page X"
+  [🗑 Delete]      → Confirm dialog → unlink(/fatfs/ui/ui_page_X.lua)
+  [📋 View Source] → Open WebIM, display file contents
 ```
 
 ---
 
-## 8. Download/Install/Uninstall Implementation
+## 8. Install / Uninstall Implementation
 
-### 8.1 Download & Installation Flow
-
-```
-① User clicks [Install] on the card.
-② Space check runs (check_space_before_install).
-③ Card state switches to DOWNLOADING. An active progress bar appears.
-④ Background download launches:
-   Runs cap_lua_async with download_skill.lua (action=install).
-   - Downloader enhancement: The Lua downloader script is updated to output structured log lines (e.g., "[PROGRESS] 45%") to stdout/stderr during chunk transfers.
-⑤ Progress Polling & Extraction:
-   The native C page timer polls the running Job logs, parses the progress output, and updates the LVGL progress bar dynamically.
-⑥ Integrity & Hash Check:
-   - Once downloaded, state changes to VERIFYING.
-   - The C core (or Lua installer) computes the SHA256 hash of the downloaded package and verifies it against the `sha256` field inside `skills-data.json`.
-   - If verification fails, files are deleted, state reverts to IDLE, and a "Hash verification failed" popup appears.
-⑦ Extraction:
-   - On success, state changes to INSTALLING.
-   - Unzips/moves the package contents to `/fatfs/skills/<id>/`.
-⑧ Dynamic Update:
-   - State changes to INSTALLED, progress bar hides, and button label changes to "Uninstall".
-   - Updates the disk capacity indicator.
-   - Automatically registers the new skill to the LLM manager by calling `claw_skill_register("/fatfs/skills/<id>/SKILL.md")`. The AI assistant can now use the new tools without requiring a reboot.
-   - Refreshes the list if the "Installed" category tab is active.
-```
-
-### 8.2 Uninstallation Flow
+### 8.1 Download Flow
 
 ```
-① User clicks [Uninstall] on the installed skill card.
-② A popup asks: "Are you sure you want to uninstall Miner Dashboard?" [Confirm] [Cancel].
-③ Physical deletion: Recursively deletes the skill directory `/fatfs/skills/<id>/`.
-④ Synchronous Unregistration: Calls `claw_skill_unregister(skill_id)` to instantly remove the tools from the LLM context.
-⑤ Revert State: Card status resets to IDLE. Button label reverts to "Install".
-⑥ Refresh: Updates disk capacity bar and refreshes lists if on the "Installed" tab.
+① User taps [Install]
+② Space check (check_space_before_install)
+③ Card state → DOWNLOADING, show progress bar
+④ Call skills_lab_downloader Lua script (async):
+   cap_lua_async → download_skill.lua action=install
+⑤ Poll job status + parse log output for progress
+⑥ Complete → state INSTALLED
+⑦ Refresh capacity indicator
+⑧ Refresh "My Skills" tab if open
 ```
 
-### 8.3 Card Selection Run Behavior
+### 8.2 Uninstall Flow
 
-- When a card is `INSTALLED`, **clicking anywhere on the card body directly runs the skill** (e.g., calling `claw.display.change_page(target_page)` or triggering its entrypoint script).
-- Only clicking the `[Uninstall]` action button triggers the deletion flow.
+```
+① User long-presses installed card (or taps [Uninstall] button)
+② Confirm dialog: "Uninstall Miner Dashboard?"
+   [Confirm] [Cancel]
+③ Recursively delete /fatfs/skills/<id>/
+④ Call unregister_skill (remove from LLM skill list)
+⑤ Card state → IDLE
+⑥ Refresh capacity indicator
+```
 
-### 8.4 C API Functions (Marketplace Control)
+### 8.3 Required C-Level APIs
 
 ```c
-// Starts skill download (async, returns a job ID)
-esp_err_t skill_market_install(const char *skill_id, 
+// Install skill (async, returns job_id for polling)
+esp_err_t skill_market_install(const char *skill_id,
                                 char *job_id_out, size_t job_id_size);
 
-// Queries installation and progress logs
+// Query install progress
 esp_err_t skill_market_get_progress(const char *job_id,
                                      uint8_t *progress_out,
                                      char *status_out, size_t status_size);
 
-// Uninstalls a skill package
+// Uninstall skill
 esp_err_t skill_market_uninstall(const char *skill_id);
 
-// Checks if a skill package is installed
+// Check if installed
 bool skill_market_is_installed(const char *skill_id);
 
-// Retrieves the remaining free space in FATFS
+// Get FATFS free space
 uint64_t skill_market_get_free_space(void);
 ```
 
 ---
 
-## 9. API Summary
+## 9. API Requirements Summary
 
-### 9.1 New LVGL display C APIs (Exposed to Lua)
+### 9.1 New LVGL APIs (C layer, Lua-callable)
 
-| API | Description | Priority |
-|-----|------|--------|
-| `claw.display.update_label(id, text)` | Update text of an existing label | **Phase 1** |
-| `claw.display.update_bar(id, value)` | Update value of an existing progress bar | **Phase 1** |
-| `claw.display.delete(id)` | Delete a widget by its ID | **Phase 1** |
-| `claw.display.sleep(ms)` | Non-blocking delay inside Lua task | **Phase 1** |
+| API | Purpose | Priority |
+|-----|---------|----------|
+| `claw.display.update_label(id, text)` | Update existing label text | **Phase 1** |
+| `claw.display.update_bar(id, value)` | Update existing bar value | **Phase 1** |
+| `claw.display.delete(id)` | Remove UI element | **Phase 1** |
+| `claw.display.sleep(ms)` | Non-blocking delay | **Phase 1** |
 | `claw.display.peek_event()` | Non-blocking event poll | Phase 2 |
-| `claw.display.image(x, y, path)` | Renders a PNG image | Phase 2 |
+| `claw.display.image(x, y, path)` | Display PNG image | Phase 2 |
 
-### 9.2 Marketplace C APIs (Used internally)
+### 9.2 Marketplace-Specific C Interfaces
 
-| Function | Source | Description |
-|------|------|------|
-| `skills-data.json` | Embedded file | Skill catalog metadata |
-| `cap_lua_async_submit()` | cap_lua | Submit Lua download script in background |
-| `cap_lua_async_get_status()` | cap_lua | Check job logs and completion status |
-| `fatfs_get_free_space()` | FATFS | Free space calculation |
-| `unlink()` / `rmdir_r()` | POSIX | Deletion of files/directories |
-| `claw_skill_register()` | cap_skill_mgr | Hot-register skill to the LLM tools context |
-| `claw_skill_unregister()` | cap_skill_mgr | Deregister skill from the LLM tools context |
-
-### 9.3 HTTP REST Web APIs (Exposed for Web UI)
-
-To support remote installation and management via the desktop Web interface, the HTTP server must support:
-
-| API Endpoint | HTTP Method | Request Body / Query | Description |
-|--------------|-------------|----------------------|-------------|
-| `/api/skills` | GET | None | Get all available skills, install status, and free space |
-| `/api/skills/install` | POST | `{"id": "miner_dashboard"}` | Triggers async background download and install, returns job_id |
-| `/api/skills/uninstall` | POST | `{"id": "miner_dashboard"}` | Triggers physical package wipe and AI tool deregistration |
-| `/api/skills/progress` | GET | `?job_id=xxx` | Retrieve progress percentage and download status |
+| Interface | Source | Purpose |
+|-----------|--------|---------|
+| `skills-data.json` | Build-time embed | Skill catalog metadata |
+| `cap_lua_async_submit()` | cap_lua | Async execute install Lua script |
+| `cap_lua_async_get_status()` | cap_lua | Query install progress |
+| `fatfs_get_free_space()` | FATFS | Space check |
+| `unlink()` / `rmdir_r()` | POSIX | Delete files on uninstall |
+| `claw_skill_unregister()` | cap_skill_mgr | Remove from LLM skill list |
 
 ---
 
-## 10. File Inventory (To be Created/Modified)
+## 10. File Manifest (Implementation)
 
 ```
-New Files:
-  main/displays/skill_market_page.c       ← Marketplace screen creation and list management
-  main/displays/skill_market_page.h
-  main/displays/skill_market_installer.c  ← Background download, integrity check, and FS operations
-  main/displays/skill_market_installer.h
-  components/esp_claw/.../skills-data.json ← Embedded skills marketplace metadata list
+New files:
+  main/tasks/skill_market_page.c       ← LVGL marketplace page
+  main/tasks/skill_market_page.h
+  main/tasks/skill_market_installer.c  ← Install/uninstall/space management
+  main/tasks/skill_market_installer.h
+  components/esp_claw/.../skills-data.json  ← Embedded skill catalog
 
-Modified Files:
-  main/displays/lvgl_screen.c             ← Page 4 registration and bottom navigation buttons integration
-  main/displays/claw_display.c            ← Routing white-list bypass for Page 4 (native)
-  main/http_server/...                    ← Web REST API implementation for remote skills management
-  components/esp_claw/.../cap_lua         ← Lua async support, custom script runner, and extra UI functions
-  main/esp_claw_init.c                    ← Custom UI page scan index range updated from [4-7] to [5-7]
+Modified files:
+  main/lvgl_screen.c                   ← Register Page 7 + bottom bar icon
+  main/http_server/...                 ← May need skill status in web UI
+  components/esp_claw/.../cap_lua      ← peek_event + sleep + update_* APIs
 ```
 
 ---
 
-## 11. Phased Roadmap
+## 11. Phased Plan
 
-### Phase 2a — Core Functionality (1-2 Weeks)
+### Phase 2a — Core (1-2 weeks)
 
-- [x] Refinement of Marketplace Plan (This specification)
-- [ ] Script and flow to embed `skills-data.json` inside flash
-- [ ] Basic marketplace card layout list rendering & scroll filtering
-- [ ] Install/Uninstall button actions & FATFS checks
-- [ ] Disk space capacity indicator bar
-- [ ] Insufficient space dialog boxes
+- [x] Design spec (this document)
+- [ ] `skills-data.json` generation script + firmware embedding
+- [ ] Card list rendering (category filter + scroll)
+- [ ] Install/uninstall buttons + FATFS state detection
+- [ ] Capacity indicator
+- [ ] Insufficient space dialog
 
-### Phase 2b — Visual Enhancements & Safety (1 Week)
+### Phase 2b — Visual Polish (1 week)
 
-- [ ] Background downloading of cover images & local file caching
-- [ ] Downloader progress output polling & dynamic UI progress bar updating
-- [ ] Package SHA256 integrity verification step
-- [ ] Auto-reloading of LLM tools on install/uninstall
+- [ ] Cover image async download + caching
+- [ ] Install progress bar
+- [ ] Download failure retry
 
-### Phase 2c — Custom Pages (1 Week)
+### Phase 2c — Custom Pages (1 week)
 
-- [ ] "Installed" filter category view
-- [ ] Sandbox pages list & delete actions
-- [ ] Integration with WebIM code generator to save files as Page 5+ (`ui_page_5.lua`)
+- [ ] "My Skills" tab
+- [ ] Custom page list + preview/delete
+- [ ] Create new custom page → LLM generation
 
-### Phase 2d — Sandbox Expansion & Web Integration (1 Week)
+### Phase 2d — Lua API Extensions (parallel with 2a)
 
-- [ ] Web HTTP REST endpoints implementation and remote management tabs
-- [ ] Multi-page navigation arrows in Claw Mode bottom bar
-
----
-
-## 12. Architecture & Security Recommendations
-
-### 12.1 Page 4 Native Routing in `claw_display.c`
-Currently, `claw_display.c` handles all pages `page_id >= 4` as sandboxed Lua screens. Since Page 4 is now a native C marketplace, we must whitelist it:
-* **`claw_display_is_page_active(page_id)` Modification**:
-  * Return `true` unconditionally for `page_id == 4`, bypassing the `s_ext_pages` and custom page switches.
-* **`claw_display_switch_page(page_id)` Modification**:
-  * For `page_id == 4`, load the native C screen (`SCREEN_MARKET` / `refresh_market_screen`) directly instead of looking for Lua sandbox page definitions.
-* **Firewall Filter (`claw_display_timer_cb`)**:
-  * Keep sandbox command filters active starting from Page 5 (`CLAW_DISPLAY_EXT_PAGE_BASE` must be modified to `5` instead of `4`), so that Page 4's C native controls can draw directly on the screen without sandbox restrictions.
-
-### 12.2 Sandbox Scope & Write Boundaries
-- **Path Restrictions**: Custom installation extraction must be strictly restricted to the `/fatfs/skills/<id>/` subdirectory.
-- **Write Checks**: The Lua sandbox filesystem wrapper must block custom scripts from writing to critical configuration folders such as `/fatfs/router_rules/` and `/fatfs/scheduler/` to maintain device security.
-
-### 12.3 Dynamic Tool Synchronization
-- **Context Updates**: When a skill is installed, registering it via `claw_skill_register` inserts the tool description into the LLM's active context immediately.
-- **Deregistration**: Deregistering on uninstallation ensures the AI helper is aware the tool is no longer on disk, preventing hallucinated tool calls.
-
-### 12.4 Heap and PSRAM Memory Controls
-- To prevent SRAM exhaustion on the ESP32-S3, the marketplace catalog `skill_card_t` list should be allocated in PSRAM using:
-  ```c
-  skill_card_t *cards = heap_caps_malloc(sizeof(skill_card_t) * card_count, MALLOC_CAP_SPIRAM);
-  ```
-  This guarantees that mining stratum socket buffering, network stacks, and image decoding have sufficient internal memory to operate without crashes.
+- [ ] `update_label` / `update_bar` / `delete` / `sleep`
+- [ ] `peek_event` / `image`
 
 ---
 
-*Specification Version: v1.2 · 2026-06-12*
+*Design spec version: 1.2 · 2026-06-12*

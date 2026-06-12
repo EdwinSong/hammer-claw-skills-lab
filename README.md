@@ -1,160 +1,124 @@
 # Hammer Claw Skills Lab
 
-> 🔨 为 Hammer Miner 生态打造的技能市场 — 挖矿 x AI 的硬核技能平台
+> 🔨 The skills marketplace for Hammer Miner ecosystem — mining × AI, forged in hardware.
 
-## 与 ESP-Claw Skills Lab 的关系
+## Relationship to ESP-Claw Skills Lab
 
-本项目 **fork 并大幅修改** 自 [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab)（MIT License）。
+This project is **forked and heavily modified** from [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab) (MIT License).
 
-| 维度 | esp-claw-skills-lab | hammer-claw-skills-lab |
-|------|---------------------|------------------------|
-| **目标硬件** | ESP32-S3/C5/C6 通用开发板 | **BC08-P4** (ESP32-P4+C6+8×BM1370)、**Pockt** |
-| **生态定位** | 通用 IoT AI Agent | **挖矿生态 + AI 生态** |
-| **独有能力** | camera, imu, gpio, i2c 传感器 | **算力调控、电压/频率调节、芯片温控、矿池切换、风扇策略** |
-| **技能分类** | game, utility, hardware, media, network, sensor, ai | ➕ **mining**（挖矿）、保留 game/utility/ai |
-| **外设清单** | camera, led, motor, speaker, display, button... | ➕ **asic, fan, hashoard, psu, temp_sensor, vreg, argb_led** |
-| **安装方式** | 设备端 LLM 通过 skills_lab_downloader 技能拉取 | ✅ 完全兼容原版安装流程 |
-| **前端展示** | 独立网站 skills-lab.esp-claw.com | **设备出厂页面**（LVGL 原生页面，用户不可更改） |
+| Dimension | esp-claw-skills-lab | hammer-claw-skills-lab |
+|-----------|---------------------|------------------------|
+| **Target Hardware** | ESP32-S3/C5/C6 general dev boards | **BC08-P4** (ESP32-P4+C6+8×BM1370), **Pockt** |
+| **Ecosystem** | General IoT AI Agent | **Mining + AI ecosystem** |
+| **Unique Capabilities** | camera, imu, gpio, i2c sensors | **Hashrate control, voltage/freq tuning, chip thermal mgmt, pool switching, fan policy** |
+| **Skill Categories** | game, utility, hardware, media, network, sensor, ai | ➕ **mining**, retains game/utility/ai |
+| **Peripherals** | camera, led, motor, speaker, display, button... | ➕ **asic, fan, hashoard, psu, temp_sensor, vreg, argb_led** |
+| **Install Method** | Device LLM via skills_lab_downloader skill | ✅ Fully compatible |
+| **Frontend** | Standalone website skills-lab.esp-claw.com | **Device factory page** (LVGL native, read-only) |
 
-### 代码继承声明
+### Code Provenance
 
 ```
-├── 继承自 esp-claw-skills-lab（MIT License）:
-│   ├── build/vite-plugin-skills.ts      → 技能元数据扫描生成
-│   ├── scripts/validate-skills.ts       → 技能格式校验
-│   ├── src/config/allowlist.ts          → 分类/外设白名单（已扩展）
-│   ├── src/types/                       → TypeScript 类型定义
-│   ├── src/utils/                       → 工具函数
-│   └── 整体 Vue 3 + Vite + TypeScript 架构
+├── Inherited from esp-claw-skills-lab (MIT License):
+│   ├── build/vite-plugin-skills.ts      → Skill metadata scanning & generation
+│   ├── scripts/validate-skills.ts       → Skill format validation
+│   ├── src/config/allowlist.ts          → Category/peripheral allowlists (extended)
+│   ├── src/types/                       → TypeScript type definitions
+│   ├── src/utils/                       → Utility functions
+│   └── Vue 3 + Vite + TypeScript architecture
 │
-├── Hammer 定制:
-│   ├── src/config/allowlist.ts          → 新增 mining 分类、矿机外设
-│   ├── src/assets/                      → Hammer 品牌资源
-│   ├── skills/                          → 矿机专属技能 + 精选复用官方技能
-│   └── 设备端出厂页面（LVGL C 原生）
+├── Hammer Customizations:
+│   ├── src/config/allowlist.ts          → Added mining category, miner peripherals
+│   ├── src/assets/                      → Hammer brand assets
+│   ├── skills/                          → Miner-exclusive skills + curated official imports
+│   └── On-device factory page (LVGL C native)
 │
-└── 可复用官方技能 (skills/):
-    ├── flappybird/          ← 游戏
-    ├── current_weather/     ← 天气
-    ├── current_ip_info/     ← 网络信息
-    ├── dino/                ← 小恐龙游戏
-    ├── balance_ball/        ← 平衡球（需 IMU，Pockt 可用）
-    └── ...（根据硬件兼容性筛选）
+└── Reusable Official Skills (skills/):
+    ├── flappybird/          ← Game
+    ├── current_weather/     ← Weather
+    ├── current_ip_info/     ← Network info
+    ├── dino/                ← Dino game
+    └── ... (filtered by hardware compatibility)
 ```
 
 ---
 
-## 架构设计
+## Architecture
 
-### 整体数据流
+### Data Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  hammer-claw-skills-lab (GitHub 仓库)                        │
+│  hammer-claw-skills-lab (GitHub repo)                        │
 │                                                             │
 │  skills/                     build/           src/          │
 │  ├── miner_dashboard/        vite-plugin  →   generated/    │
 │  ├── miner_overclock/        skills.ts        skills-data   │
 │  ├── pool_switcher/             │              .json         │
 │  ├── fan_control/               │              tags.json     │
-│  ├── flappybird/   ← 复用       │                            │
+│  ├── flappybird/   ← imported   │                            │
 │  └── ...                        ▼                            │
 │                          npm run build                       │
 │                          ┌──────────┐                        │
-│                          │  dist/   │  ← 静态站点产物         │
-│                          │  raw/    │  ← 技能源文件镜像       │
+│                          │  dist/   │  ← Static site output  │
+│                          │  raw/    │  ← Skill source mirror │
 │                          └──────────┘                        │
 └─────────────────────────────────────────────────────────────┘
          │                              │
-         │ ① 技能安装（设备端 LLM）       │ ② 出厂页面（LVGL C）
+         │ ① Skill install (device LLM) │ ② Factory page (LVGL C)
          ▼                              ▼
 ┌─────────────────┐          ┌──────────────────────────┐
-│  BC08-P4 设备    │          │  BC08-P4 factory page     │
-│                 │          │  (LVGL 原生 Page X)        │
+│  BC08-P4 Device  │          │  BC08-P4 Factory Page     │
+│                 │          │  (LVGL Native Page 7)     │
 │  skills_lab_    │          │                          │
 │  downloader     │          │  ┌────────────────────┐   │
-│  技能拉取技能文件 │          │  │ Hammer Skills Lab  │   │
-│  → /fatfs/      │          │  │ ────────────────── │   │
-│    skills/      │          │  │ ⛏ Miner Dashboard  │   │
-│                 │          │  │ ⚡ Overclock Guide  │   │
+│  pulls skill    │          │  │ Hammer Skills Lab  │   │
+│  files          │          │  │ ────────────────── │   │
+│  → /fatfs/      │          │  │ ⛏ Miner Dashboard  │   │
+│    skills/      │          │  │ ⚡ Overclock Guide  │   │
 │                 │          │  │ 🌀 Fan Control     │   │
 │                 │          │  │ 🌊 Pool Switcher   │   │
 │                 │          │  │ 🎮 Flappy Bird     │   │
 │                 │          │  │ ☀️ Current Weather  │   │
 │                 │          │  │ ...                │   │
-│                 │          │  │          [安装] →  │   │
+│                 │          │  │          [Install] │   │
 │                 │          │  └────────────────────┘   │
 │                 │          │                          │
-│                 │          │  数据源: dist/skills-     │
-│                 │          │  data.json (编译时嵌入)    │
+│                 │          │  Data: dist/skills-      │
+│                 │          │  data.json (embedded)     │
 └─────────────────┘          └──────────────────────────┘
-```
-
-### 与设备端的接口
-
-设备出厂页面需要的数据结构（编译时嵌入固件）：
-
-```typescript
-// dist/skills-data.json — 编译时由 vite-plugin-skills.ts 生成
-interface SkillsCatalog {
-  generated_at: string;       // 生成时间戳
-  skills: SkillEntry[];       // 技能列表
-  tags_index: SkillTagsIndex; // 分类/标签/外设索引
-}
-
-interface SkillEntry {
-  id: string;                 // 技能唯一标识 (如 "miner_dashboard")
-  name: string;               // 与目录名一致
-  description: string;        // 一句话描述（LLM 用）
-  author: string;             // 作者
-  title: string;              // 展示标题（从 SKILL.md H1 提取）
-  metadata: {
-    category: string[];       // ["mining", "utility"]
-    peripherals: string[];    // ["asic", "fan", "display"]
-    tags: string[];           // ["hashrate", "temperature"]
-    cap_groups: string[];     // ["cap_miner", "cap_lua"]
-  };
-  extra_files: {
-    references: string[];     // 如 ["guide.md"]
-    scripts: string[];        // 如 ["dashboard.lua"]
-    assets: string[];         // 如 ["icon.png"]
-  };
-  files: string[];            // 全部文件相对路径
-  totalSize: number;          // 总大小（字节）
-  featured: boolean;          // 是否精选
-}
 ```
 
 ---
 
-## 技能分类设计
+## Skill Categories
 
-### 新增 `mining` 分类
+### New `mining` category
 
 ```typescript
-// src/config/allowlist.ts (Hammer 扩展版)
+// src/config/allowlist.ts (Hammer extended)
 export const ALLOWED_CATEGORIES = [
-  'mining',    // 🆕 挖矿专属
-  'game',      // 保留
-  'utility',   // 保留
-  'hardware',  // 保留
-  'ai',        // 保留
-  'network',   // 保留
-  'media',     // 保留
-  'sensor',    // 保留
+  'mining',    // 🆕 Mining exclusive
+  'game',      // Retained
+  'utility',   // Retained
+  'hardware',  // Retained
+  'ai',        // Retained
+  'network',   // Retained
+  'media',     // Retained
+  'sensor',    // Retained
 ] as const;
 
 export const ALLOWED_PERIPHERALS = [
-  // Hammer 矿机特有
-  'asic',              // BM1370 ASIC 芯片
-  'fan',               // 散热风扇
-  'hashboard',         // 算力板
-  'psu',               // 电源模块 (TPS546)
-  'temp_sensor',       // 温度传感器 (TMP75)
-  'vreg',              // 电压调节器
-  'argb_led',          // WS2812B 灯带
-  'frequency_controller', // 频率控制器
-  // 保留官方
+  // Hammer miner specific
+  'asic',              // BM1370 ASIC chips
+  'fan',               // Cooling fan
+  'hashboard',         // Hash board
+  'psu',               // Power supply (TPS546)
+  'temp_sensor',       // Temperature sensor (TMP75)
+  'vreg',              // Voltage regulator
+  'argb_led',          // WS2812B LED strip
+  'frequency_controller', // Frequency controller
+  // Retained from official
   'display',
   'button',
   'led',
@@ -172,179 +136,156 @@ export const ALLOWED_PERIPHERALS = [
 
 ---
 
-## 计划技能清单
+## Planned Skills
 
-### 🔨 矿机专属（新增）
+### 🔨 Miner Exclusive (New)
 
-| 技能 ID | 标题 | 依赖外设 | 依赖 cap_groups | 说明 |
-|---------|------|---------|-----------------|------|
-| `miner_dashboard` | 矿机仪表盘 | asic, fan, temp_sensor | cap_miner | 实时算力/温度/收益面板 |
-| `miner_overclock` | 安全超频向导 | asic, vreg, frequency_controller | cap_miner | 引导 LLM 逐步调频调压 |
-| `pool_switcher` | 矿池切换 | - | cap_miner | 一键切换主/备矿池 |
-| `fan_control` | 风扇策略 | fan, temp_sensor | cap_miner | 根据芯片温度自动调速 |
-| `hashrate_monitor` | 算力监控 | asic | cap_miner | 历史算力曲线+异常告警 |
-| `power_efficiency` | 能效分析 | psu, asic, vreg | cap_miner | 功耗/算力比优化建议 |
-| `chip_health` | 芯片体检 | asic, temp_sensor | cap_miner | 逐芯片状态检测报告 |
-| `rgb_mood` | 矿机氛围灯 | argb_led | cap_miner | 根据算力/温度变色 |
+| Skill ID | Title | Requires | Cap Groups | Description |
+|----------|-------|----------|------------|-------------|
+| `miner_dashboard` | Miner Dashboard | asic, fan, temp_sensor | cap_miner | Real-time hashrate/temp/revenue panel |
+| `miner_overclock` | Safe Overclock | asic, vreg, frequency_controller | cap_miner | Guided freq/voltage tuning via LLM |
+| `pool_switcher` | Pool Switcher | - | cap_miner | One-tap primary/fallback pool switch |
+| `fan_control` | Fan Policy | fan, temp_sensor | cap_miner | Auto fan speed by chip temperature |
+| `hashrate_monitor` | Hashrate Monitor | asic | cap_miner | Historical curve + anomaly alerts |
+| `power_efficiency` | Efficiency Analyzer | psu, asic, vreg | cap_miner | Power/hashrate ratio optimization |
+| `chip_health` | Chip Health Check | asic, temp_sensor | cap_miner | Per-chip status report |
+| `rgb_mood` | Mood Lighting | argb_led | cap_miner | Color shifts by hashrate/temp |
 
-### 🎮 复用官方（筛选后）
+### 🎮 Imported from Official (curated)
 
-| 技能 ID | 来源 | BC08 可用 | Pockt 可用 | 备注 |
-|---------|------|-----------|------------|------|
-| `flappybird` | 官方 | ✅ | ✅ | 已测试安装成功 |
-| `current_weather` | 官方 | ✅ | ✅ | 需配 API |
-| `current_ip_info` | 官方 | ✅ | ✅ | |
-| `dino` | 官方 | ✅ | ✅ | 小恐龙游戏 |
-| `github_repo_star` | 官方 | ✅ | ✅ | |
-| `china_a_share_quote` | 官方 | ✅ | ✅ | A 股行情 |
-| `clock_dial_demo` | 官方 | ✅ | ✅ | 表盘演示 |
-| `balance_ball` | 官方 | ❌ 无 IMU | ✅ (如有) | 需加速度计 |
-| `camera_preview` | 官方 | ❌ 无摄像头 | ❌ | |
+| Skill ID | Source | BC08 OK | Pockt OK | Notes |
+|----------|--------|---------|----------|-------|
+| `flappybird` | official | ✅ | ✅ | Tested install success |
+| `current_weather` | official | ✅ | ✅ | API config required |
+| `current_ip_info` | official | ✅ | ✅ | |
+| `dino` | official | ✅ | ✅ | Chrome dino game |
+| `github_repo_star` | official | ✅ | ✅ | |
+| `china_a_share_quote` | official | ✅ | ✅ | A-share quotes |
+| `clock_dial_demo` | official | ✅ | ✅ | Analog clock |
+| `bilibili_up_fans` | official | ✅ | ✅ | Bilibili follower count |
+| `codex_usage_dashboard` | official | ✅ | ✅ | Codex usage stats |
+| `balance_ball` | official | ❌ No IMU | ✅ (if present) | Needs accelerometer |
+| `camera_preview` | official | ❌ No camera | ❌ | |
 
 ---
 
-## 项目结构
+## Project Structure
 
 ```
 hammer-claw-skills-lab/
-├── README.md                     # ← 本文件
-├── LICENSE                       # MIT（继承自 esp-claw-skills-lab）
-├── UPSTREAM.md                   # 上游追踪：记录 fork 来源和同步策略
+├── README.md                     # ← This file
+├── LICENSE                       # MIT (inherited from esp-claw-skills-lab)
+├── UPSTREAM.md                   # Fork provenance & sync strategy
 │
-├── skills/                       # 技能目录 ← 核心内容
-│   ├── miner_dashboard/          # 🆕 矿机仪表盘
+├── skills/                       # Skill directory ← Core content
+│   ├── miner_dashboard/          # 🆕 Miner dashboard
 │   │   ├── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── dashboard.lua
 │   │   └── assets/
 │   │       └── icon.png
-│   ├── miner_overclock/          # 🆕 安全超频
-│   ├── pool_switcher/            # 🆕 矿池切换
-│   ├── fan_control/              # 🆕 风扇控制
-│   ├── hashrate_monitor/         # 🆕 算力监控
-│   ├── power_efficiency/         # 🆕 能效分析
-│   ├── chip_health/              # 🆕 芯片体检
-│   ├── rgb_mood/                 # 🆕 氛围灯
-│   ├── flappybird/               # ← 复用官方
-│   ├── current_weather/          # ← 复用官方
-│   ├── dino/                     # ← 复用官方
+│   ├── miner_overclock/          # 🆕 Safe overclock
+│   ├── pool_switcher/            # 🆕 Pool switch
+│   ├── fan_control/              # 🆕 Fan control
+│   ├── hashrate_monitor/         # 🆕 Hashrate monitor
+│   ├── power_efficiency/         # 🆕 Efficiency
+│   ├── chip_health/              # 🆕 Chip health
+│   ├── rgb_mood/                 # 🆕 Mood lighting
+│   ├── flappybird/               # ← Imported official
+│   ├── current_weather/          # ← Imported official
+│   ├── dino/                     # ← Imported official
 │   └── ...
 │
-├── build/                        # 构建工具
-│   └── vite-plugin-skills.ts     # Vite 插件：扫描 skills/ → 生成 JSON
+├── build/                        # Build tooling
+│   └── vite-plugin-skills.ts     # Vite plugin: scan skills/ → generate JSON
 │
-├── scripts/                      # CI/工具脚本
-│   └── validate-skills.ts        # 技能格式校验（CI gate）
+├── scripts/                      # CI/utility scripts
+│   └── validate-skills.ts        # Skill format validation (CI gate)
 │
-├── src/                          # Web 前端（Vue 3 + Vite + TypeScript）
+├── src/                          # Web frontend (Vue 3 + Vite + TypeScript)
 │   ├── App.vue
 │   ├── main.ts
 │   ├── config/
-│   │   └── allowlist.ts          # 分类/外设白名单（Hammer 扩展版）
-│   ├── components/               # Vue 组件
-│   ├── composables/              # 组合式函数
-│   ├── generated/                # 构建产物（gitignore）
-│   │   ├── skills-data.json      # 技能元数据
-│   │   └── tags.json             # 标签索引
-│   ├── i18n/                     # 国际化（中文优先）
-│   ├── router/                   # 路由
-│   ├── stores/                   # Pinia 状态
-│   ├── styles/                   # 样式
-│   ├── types/                    # TS 类型定义
-│   ├── utils/                    # 工具函数
-│   └── views/                    # 页面视图
+│   │   └── allowlist.ts          # Category/peripheral allowlists (Hammer extended)
+│   ├── components/               # Vue components
+│   ├── composables/              # Composables
+│   ├── generated/                # Build artifacts (gitignored)
+│   │   ├── skills-data.json      # Skill metadata
+│   │   └── tags.json             # Tag index
+│   ├── i18n/                     # Internationalization
+│   ├── router/                   # Routes
+│   ├── stores/                   # Pinia state
+│   ├── styles/                   # Stylesheets
+│   ├── types/                    # TS type definitions
+│   ├── utils/                    # Utilities
+│   └── views/                    # Page views
 │
-├── public/                       # 静态资源
+├── docs/
+│   └── DEVICE_MARKETPLACE_DESIGN.md  # On-device marketplace design spec
+│
+├── public/                       # Static assets
 │   └── favicon.svg
 │
-├── package.json                  # pnpm monorepo
+├── package.json                  # pnpm workspace
 ├── pnpm-lock.yaml
-├── pnpm-workspace.yaml
-├── vite.config.ts                # Vite 配置
+├── vite.config.ts
 ├── tsconfig.json
 └── .github/workflows/            # CI/CD
-    └── validate.yml              # 技能校验 + 构建
+    └── validate.yml              # Skill validation + build
 ```
 
 ---
 
-## 复用策略
+## Import Strategy
 
-### 从 esp-claw-skills-lab 同步官方技能的流程
+### Syncing official skills from upstream
 
 ```bash
-# 1. 添加上游远程
+# 1. Add upstream remote
 git remote add upstream https://github.com/espressif/esp-claw-skills-lab.git
 
-# 2. 拉取上游更新
+# 2. Fetch upstream updates
 git fetch upstream master
 
-# 3. 挑选需要的技能目录
+# 3. Cherry-pick desired skill directories
 git checkout upstream/master -- skills/flappybird/
 git checkout upstream/master -- skills/current_weather/
 # ...
 
-# 4. 运行校验
+# 4. Run validation
 pnpm validate-skills
 
-# 5. 提交
+# 5. Commit
 git commit -m "sync: upstream skills flappybird, current_weather"
 ```
 
-### 不可复用的技能
+### Skipped skills
 
-以下官方技能因硬件依赖无法在 BC08 上运行：
-- `camera_preview` — 需摄像头
-- `balance_ball` — 需 IMU (BC08 无；Pockt 如有则可)
-- `movement_detection` — 需 IMU
-- `dfrobot_*` — 需 I2C 外设（BC08 I2C 被矿机占用）
-- `unihiker_*` — 需 UNIHIKER 扩展板
+The following official skills are incompatible with BC08 hardware:
 
-这些技能保留在 `UPSTREAM.md` 中记录，不纳入 `skills/` 目录。
+| Skill | Reason |
+|-------|--------|
+| `camera_preview` | No camera on BC08 |
+| `balance_ball` | No IMU on BC08 |
+| `movement_detection` | No IMU on BC08 |
+| `dfrobot_matrix_lidar_8x8_i2c` | I2C occupied by miner |
+| `dfrobot_stcc4_i2c` | I2C occupied by miner |
+| `unihiker_button` | Requires UNIHIKER expansion |
+| `unihiker_expansion_*` | Requires UNIHIKER expansion |
+| `lcd_touch_paint` | Display-only panel (no touch) |
+
+These are documented in `UPSTREAM.md` but excluded from device builds.
 
 ---
 
-## 设备端出厂页面方案（Phase 2）
+## On-Device Factory Page (Phase 2)
 
-> ⚠️ 本次先讨论方案，不实现。此章节为设计稿。
+> Design spec: [docs/DEVICE_MARKETPLACE_DESIGN.md](docs/DEVICE_MARKETPLACE_DESIGN.md)
 
-### 页面布局
-
-```
-┌──────────────────────────────────┐
-│  🔨 Hammer Skills Lab            │  ← 顶部标题栏（不可编辑）
-│  ─────────────────────────────── │
-│  [⛏ 挖矿] [🎮 游戏] [🔧 工具] [🤖 AI]│ ← 分类标签
-│                                  │
-│  ┌──────────────────────────────┐│
-│  │ ⛏ Miner Dashboard           ││
-│  │ 实时算力/温度/收益面板        ││  ← 技能卡片列表
-│  │ 18.5 KB        [安装]        ││     (LVGL 原生渲染)
-│  └──────────────────────────────┘│
-│  ┌──────────────────────────────┐│
-│  │ ⚡ Safe Overclock            ││
-│  │ 引导 LLM 安全调频调压         ││
-│  │ 12.3 KB        [安装]        ││
-│  └──────────────────────────────┘│
-│  ┌──────────────────────────────┐│
-│  │ 🎮 Flappy Bird              ││
-│  │ 经典小鸟飞行游戏              ││
-│  │ 18.7 KB        [已安装 ✓]    ││
-│  └──────────────────────────────┘│
-│                                  │
-│  数据源: skills-data.json        │  ← 编译时嵌入固件
-│  ─────────────────────────────── │
-│  [主页] [设置] [网络] [技能市场]   │  ← 底部导航栏
-└──────────────────────────────────┘
-```
-
-### 技术实现要点
-
-- **页面编号**：出厂页面使用 Page 7（保留 Page 4-6 给用户自定义 Lua 页面）
-- **渲染方式**：LVGL C 原生渲染（非 Lua，确保性能和不被覆盖）
-- **数据嵌入**：`skills-data.json` 通过 `EMBED_FILES` 编译进固件，运行时从 flash 读取
-- **安装触发**：用户点击 [安装] → 调用 `skills_lab_downloader` 技能的 Lua 脚本
-- **状态管理**：已安装/未安装状态通过检查 `/fatfs/skills/<id>/SKILL.md` 是否存在判断
+- **Page number**: Page 7 (factory page, not overwritable)
+- **Render**: LVGL C native (performance + immutability)
+- **Data source**: `skills-data.json` embedded at build time
+- **Features**: Category tabs, cover cards, install/uninstall, space indicator, custom pages section
 
 ---
 
@@ -361,50 +302,50 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - run: pnpm install
-      - run: pnpm validate-skills   # 校验所有 SKILL.md 格式
-      - run: pnpm build             # 构建前端 + 生成 skills-data.json
+      - run: pnpm validate-skills
+      - run: pnpm build
 ```
 
 ---
 
-## 本地开发
+## Local Development
 
 ```bash
-# 环境要求
+# Requirements
 node >= 22.12.0
 pnpm >= 11.0
 
-# 安装依赖
+# Install
 pnpm install
 
-# 启动开发服务器（预览 Web 前端）
+# Dev server (preview web frontend)
 pnpm dev
 
-# 校验技能格式
+# Validate skill formats
 pnpm validate-skills
 
-# 构建产物
+# Build
 pnpm build
-# → dist/            静态站点
-# → dist/raw/        技能源文件镜像（供设备直接下载）
-# → src/generated/skills-data.json  技能元数据（供固件嵌入）
+# → dist/            Static site
+# → dist/raw/        Skill source mirror (direct device downloads)
+# → src/generated/skills-data.json  Skill metadata (firmware embedding)
 ```
 
 ---
 
 ## License
 
-MIT License. 继承自 [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab).
+MIT License. Inherited from [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab).
 
-原始版权声明见 [UPSTREAM.md](./UPSTREAM.md)。
+Original copyright notice in [UPSTREAM.md](./UPSTREAM.md).
 
 ---
 
-## 相关项目
+## Related Projects
 
-| 项目 | 说明 |
-|------|------|
-| [HammerMiner/BC08](https://github.com/HammerMiner/BC08) | BC08-P4 矿机固件 |
-| [HammerMiner/Hammer-OS](https://github.com/HammerMiner/Hammer-OS) | Hammer OS 矿机操作系统 |
-| [espressif/esp-claw](https://github.com/espressif/esp-claw) | ESP-Claw AI Agent 框架（上游） |
-| [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab) | ESP-Claw Skills Lab（本项目的上游来源） |
+| Project | Description |
+|---------|-------------|
+| [HammerMiner/BC08](https://github.com/HammerMiner/BC08) | BC08-P4 miner firmware |
+| [HammerMiner/Hammer-OS](https://github.com/HammerMiner/Hammer-OS) | Hammer OS miner operating system |
+| [espressif/esp-claw](https://github.com/espressif/esp-claw) | ESP-Claw AI Agent framework (upstream) |
+| [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab) | ESP-Claw Skills Lab (upstream source) |

@@ -1,76 +1,76 @@
-# 上游追踪
+# Upstream Tracking
 
-## Fork 来源
+## Fork Provenance
 
-| 项目 | 仓库 | License |
-|------|------|---------|
-| **上游** | [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab) | MIT |
-| **本项目** | [HammerMiner/hammer-claw-skills-lab](https://github.com/HammerMiner/hammer-claw-skills-lab) | MIT |
+| Project | Repository | License |
+|---------|------------|---------|
+| **Upstream** | [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab) | MIT |
+| **This Project** | [HammerMiner/hammer-claw-skills-lab](https://github.com/HammerMiner/hammer-claw-skills-lab) | MIT |
 
-## 修改摘要
+## Modification Summary
 
-相对于上游 `espressif/esp-claw-skills-lab`，本项目做了以下大幅修改：
+Relative to upstream `espressif/esp-claw-skills-lab`, this project applies the following substantial modifications:
 
-### 1. 技能分类扩展
-- **新增 `mining` 分类**：挖矿专属技能（算力调控、电压调节、矿池管理等）
-- 保留 `game`、`utility`、`ai`、`hardware`、`network`、`media`、`sensor`
+### 1. Category Extension
+- **Added `mining` category**: Mining-exclusive skills (hashrate control, voltage tuning, pool management, etc.)
+- Retained `game`, `utility`, `ai`, `hardware`, `network`, `media`, `sensor`
 
-### 2. 外设清单扩展
-- **新增矿机外设**：`asic`、`fan`、`hashboard`、`psu`、`temp_sensor`、`vreg`、`argb_led`、`frequency_controller`
-- 保留官方通用外设（`display`、`button`、`led` 等）
+### 2. Peripheral Extension
+- **Added miner peripherals**: `asic`, `fan`, `hashboard`, `psu`, `temp_sensor`, `vreg`, `argb_led`, `frequency_controller`
+- Retained official general peripherals (`display`, `button`, `led`, etc.)
 
-### 3. 技能内容
-- **新增**：8+ 矿机专属技能（miner_dashboard、miner_overclock、pool_switcher 等）
-- **复用**：精选官方技能（flappybird、current_weather、dino 等）
-- **移除**：依赖不可用硬件的技能（camera_preview、balance_ball、dfrobot_*、unihiker_*）
+### 3. Skill Content
+- **Added**: 8+ miner-exclusive skills (miner_dashboard, miner_overclock, pool_switcher, etc.)
+- **Imported**: Curated official skills (flappybird, current_weather, dino, etc.)
+- **Removed**: Skills dependent on unavailable hardware (camera_preview, balance_ball, dfrobot_*, unihiker_*)
 
-### 4. 品牌与界面
-- 品牌：ESP-Claw → Hammer Miner
-- 配色/Logo：赛博朋克暗色主题
-- 设备端：新增 LVGL 原生出厂页面（替代独立网站）
+### 4. Branding & Interface
+- Brand: ESP-Claw → Hammer Miner
+- Theme: Cyberpunk dark theme
+- Device-side: LVGL native factory page (replaces standalone website)
 
-### 5. 目标平台
-- BC08-P4：ESP32-P4 + C6 + 8×BM1370 ASIC（主要）
-- Pockt：便携矿机（次要）
+### 5. Target Platforms
+- BC08-P4: ESP32-P4 + C6 + 8×BM1370 ASIC (primary)
+- Pockt: Portable miner (secondary)
 
-## 同步策略
+## Sync Strategy
 
-### 定期同步
+### Periodic Sync
 ```bash
-# 每季度检查上游更新
+# Check upstream updates quarterly
 git fetch upstream master
-git diff master upstream/master -- skills/   # 查看官方新增技能
-git diff master upstream/master -- build/     # 查看构建工具更新
-git diff master upstream/master -- src/       # 查看前端更新（通常不需要）
+git diff main upstream/master -- skills/   # View new official skills
+git diff main upstream/master -- build/     # View build tooling updates
+git diff main upstream/master -- src/       # View frontend updates (rarely needed)
 
-# 选择性合并
+# Selective merge
 git checkout upstream/master -- skills/<new_skill>/
 pnpm validate-skills
 ```
 
-### 不追踪的部分
-- `src/` 前端代码 → 我们使用设备端 LVGL 页面，不维护独立网站
-- `.github/workflows/deploy.yml` → 无需部署到 Vercel/Cloudflare
-- 依赖特定硬件的技能 → 在 `SKIP_LIST.md` 中记录
+### Non-Tracked Parts
+- `src/` frontend code → We use on-device LVGL page, no standalone website
+- `.github/workflows/deploy.yml` → No Vercel/Cloudflare deployment needed
+- Hardware-dependent skills → Documented in skip list below
 
-## 已跳过技能
+## Skipped Skills
 
-| 技能 | 原因 |
-|------|------|
-| `camera_preview` | BC08 无摄像头 |
-| `balance_ball` | BC08 无 IMU |
-| `movement_detection` | BC08 无 IMU |
-| `dfrobot_matrix_lidar_8x8_i2c` | I2C 被矿机占用 |
-| `dfrobot_stcc4_i2c` | I2C 被矿机占用 |
-| `unihiker_button` | 需 UNIHIKER 扩展板 |
-| `unihiker_expansion_*` | 需 UNIHIKER 扩展板 |
-| `lcd_touch_paint` | 需触摸屏（BC08 屏幕为显示面板） |
+| Skill | Reason |
+|-------|--------|
+| `camera_preview` | No camera on BC08 |
+| `balance_ball` | No IMU on BC08 |
+| `movement_detection` | No IMU on BC08 |
+| `dfrobot_matrix_lidar_8x8_i2c` | I2C occupied by miner |
+| `dfrobot_stcc4_i2c` | I2C occupied by miner |
+| `unihiker_button` | Requires UNIHIKER expansion board |
+| `unihiker_expansion_*` | Requires UNIHIKER expansion board |
+| `lcd_touch_paint` | Display-only panel (no touch input) |
 
-## 许可声明
+## License Statement
 
-本项目采用 MIT License，继承自上游 `espressif/esp-claw-skills-lab`。
+This project is distributed under the MIT License, inherited from upstream `espressif/esp-claw-skills-lab`.
 
-原始版权声明：
+Original copyright:
 ```
 MIT License
 Copyright (c) 2026 Espressif Systems (Shanghai) CO LTD
