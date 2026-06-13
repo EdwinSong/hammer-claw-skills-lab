@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-06-13T08:52:53Z",
+  "generated_at": "2026-06-13T14:02:13Z",
   "repo": "HammerMiner/hammer-claw-skills-lab",
-  "total": 10,
+  "total": 9,
   "skills": [
     {
       "id": "bilibili_up_fans",
@@ -153,28 +153,6 @@
       "files": [
         "SKILL.md",
         "scripts/dino.lua"
-      ]
-    },
-    {
-      "id": "example_skill",
-      "title": "Example Skill",
-      "description": "A clear description of what this skill does and when to use it. This example is not intended to be downloaded.",
-      "author": "Espressif <test@espressif.com>",
-      "category": "utility",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [
-        "gpio"
-      ],
-      "cap_groups": [
-        "cap_time",
-        "cap_web_search"
-      ],
-      "total_size": 770,
-      "sha256": "c93e472f8f3e0d961f8aed6b9188b21f707f6e08c63d9f2f92111b6105beb270",
-      "files": [
-        "SKILL.md"
       ]
     },
     {
