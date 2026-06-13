@@ -3,15 +3,26 @@
   "name": "example_skill",
   "description": "A clear description of what this skill does and when to use it. This example is not intended to be downloaded.",
   "author": "Espressif <test@espressif.com>",
-  "metadata":
-    {
-      "cap_groups": ["cap_time", "cap_web_search"],
-      "manage_mode": "web",
-    "devices": ["universal"],
-      "category": ["utility"],
-      "peripherals": ["gpio"],
-      "tags": ["example", "demo"]
-    }
+  "metadata": {
+    "cap_groups": [
+      "cap_time",
+      "cap_web_search"
+    ],
+    "manage_mode": "web",
+    "devices": [
+      "universal"
+    ],
+    "category": [
+      "utility"
+    ],
+    "peripherals": [
+      "gpio"
+    ],
+    "tags": [
+      "example",
+      "demo"
+    ]
+  }
 }
 ---
 

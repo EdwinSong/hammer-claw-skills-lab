@@ -3,14 +3,24 @@
   "name": "bilibili_up_fans",
   "description": "Fetch the current Bilibili UP creator fan count through lua_module_call_capability. Defaults to 乐鑫信息科技.",
   "author": "ESP-Claw contributor",
-  "metadata":
-    {
-      "category": ["network"],
-      "tags": ["bilibili", "fans", "info"],
-      "cap_groups": ["cap_lua", "cap_web_search"],
-      "manage_mode": "web"
-    "devices": ["universal"],
-    }
+  "metadata": {
+    "category": [
+      "network"
+    ],
+    "tags": [
+      "bilibili",
+      "fans",
+      "info"
+    ],
+    "cap_groups": [
+      "cap_lua",
+      "cap_web_search"
+    ],
+    "manage_mode": "web",
+    "devices": [
+      "universal"
+    ]
+  }
 }
 ---
 

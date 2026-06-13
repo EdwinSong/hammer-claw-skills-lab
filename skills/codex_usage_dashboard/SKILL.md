@@ -2,15 +2,30 @@
 {
   "name": "codex_usage_dashboard",
   "description": "Show a Codex usage quota dashboard on the board display from a configured JSON endpoint, including 5-hour and weekly reset status.",
-  "metadata":
-    {
-      "category": ["utility", "ai"],
-      "tags": ["codex", "usage", "quota", "dashboard"],
-      "peripherals": ["display"],
-      "cap_groups": ["cap_lua", "cap_http_request", "cap_time"],
-      "manage_mode": "web"
-    "devices": ["universal"],
-    }
+  "metadata": {
+    "category": [
+      "utility",
+      "ai"
+    ],
+    "tags": [
+      "codex",
+      "usage",
+      "quota",
+      "dashboard"
+    ],
+    "peripherals": [
+      "display"
+    ],
+    "cap_groups": [
+      "cap_lua",
+      "cap_http_request",
+      "cap_time"
+    ],
+    "manage_mode": "web",
+    "devices": [
+      "universal"
+    ]
+  }
 }
 ---
 

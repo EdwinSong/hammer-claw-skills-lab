@@ -1,0 +1,224 @@
+{
+  "generated_at": "2026-06-13T08:52:53Z",
+  "repo": "HammerMiner/hammer-claw-skills-lab",
+  "total": 10,
+  "skills": [
+    {
+      "id": "bilibili_up_fans",
+      "title": "Bilibili UP Fans",
+      "description": "Fetch the current Bilibili UP creator fan count through lua_module_call_capability. Defaults to 乐鑫信息科技.",
+      "author": "ESP-Claw contributor",
+      "category": "network",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [],
+      "cap_groups": [
+        "cap_lua",
+        "cap_web_search"
+      ],
+      "total_size": 7118,
+      "sha256": "698e6a5d5675681dca7b664f684249db5b344045d8a79904b47996a2bf34d6e5",
+      "files": [
+        "SKILL.md",
+        "scripts/bilibili_up_fans.lua"
+      ]
+    },
+    {
+      "id": "china_a_share_quote",
+      "title": "China A-Share Quote",
+      "description": "Fetch China A-share stock quote information through lua_module_call_capability and https://qt.gtimg.cn. Defaults to sh688018.",
+      "author": "ESP-Claw contributor",
+      "category": "network",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [],
+      "cap_groups": [
+        "cap_lua",
+        "cap_web_search"
+      ],
+      "total_size": 6981,
+      "sha256": "d6aa7606a284bbb117959687bc3c9ac9cfac0d8d5d7c7f8fd62da38c17a4e16d",
+      "files": [
+        "SKILL.md",
+        "scripts/china_a_share_quote.lua"
+      ]
+    },
+    {
+      "id": "clock_dial_demo",
+      "title": "Clock Dial Demo",
+      "description": "An animated analog clock dial rendered on the on-board LCD, with hour/minute/second hands and a dark themed face.",
+      "author": "ESP-Claw contributor",
+      "category": "utility",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "display"
+      ],
+      "cap_groups": [
+        "cap_lua"
+      ],
+      "total_size": 7564,
+      "sha256": "a3c2de85b8f95bfa96218515a53f552ed316f703bf62b0e2a89069273b4acf19",
+      "files": [
+        "SKILL.md",
+        "scripts/clock_dial_demo.lua"
+      ]
+    },
+    {
+      "id": "codex_usage_dashboard",
+      "title": "Codex Usage Dashboard",
+      "description": "Show a Codex usage quota dashboard on the board display from a configured JSON endpoint, including 5-hour and weekly reset status.",
+      "author": "",
+      "category": "utility",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "display"
+      ],
+      "cap_groups": [
+        "cap_lua",
+        "cap_http_request",
+        "cap_time"
+      ],
+      "total_size": 17965,
+      "sha256": "3d51be86d211019e118fe1e8ad9de4bc8aade316baa12e308e147ba300674f6e",
+      "files": [
+        "SKILL.md",
+        "scripts/codex_usage_dashboard.lua"
+      ]
+    },
+    {
+      "id": "current_ip_info",
+      "title": "Current IP Info",
+      "description": "Fetch the current public IP geolocation information through lua_module_call_capability and https://ipinfo.io/json.",
+      "author": "ESP-Claw contributor",
+      "category": "network",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [],
+      "cap_groups": [
+        "cap_lua",
+        "cap_web_search"
+      ],
+      "total_size": 5951,
+      "sha256": "65135e0914a3365622beb0775c3dca2fd3976a3bc5ba3e17a659fd04507d8627",
+      "files": [
+        "SKILL.md",
+        "scripts/current_ip_info.lua"
+      ]
+    },
+    {
+      "id": "current_weather",
+      "title": "Current Weather",
+      "description": "Fetch current weather through lua_module_call_capability and https://api.open-meteo.com. Defaults to Singapore.",
+      "author": "ESP-Claw contributor",
+      "category": "utility",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [],
+      "cap_groups": [
+        "cap_lua",
+        "cap_web_search"
+      ],
+      "total_size": 10050,
+      "sha256": "dd1952171f784c184ff22fb7c39d64bc4b443a29c800846de07b39494dcd71e7",
+      "files": [
+        "SKILL.md",
+        "scripts/current_weather.lua"
+      ]
+    },
+    {
+      "id": "dino",
+      "title": "Dino",
+      "description": "Run a Chrome offline-style Dino jumping runner on the board LCD. Use when the user asks for Dino, dinosaur game, runner game, jump game, LCD touch game, or GPIO button game.",
+      "author": "ESP-Claw contributor",
+      "category": "game",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "display"
+      ],
+      "cap_groups": [
+        "cap_lua"
+      ],
+      "total_size": 22583,
+      "sha256": "bc6299785fee0162894f8e93bae7c317d86cc4acc0bbbe51a72d8b5e4abf1945",
+      "files": [
+        "SKILL.md",
+        "scripts/dino.lua"
+      ]
+    },
+    {
+      "id": "example_skill",
+      "title": "Example Skill",
+      "description": "A clear description of what this skill does and when to use it. This example is not intended to be downloaded.",
+      "author": "Espressif <test@espressif.com>",
+      "category": "utility",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "gpio"
+      ],
+      "cap_groups": [
+        "cap_time",
+        "cap_web_search"
+      ],
+      "total_size": 770,
+      "sha256": "c93e472f8f3e0d961f8aed6b9188b21f707f6e08c63d9f2f92111b6105beb270",
+      "files": [
+        "SKILL.md"
+      ]
+    },
+    {
+      "id": "flappybird",
+      "title": "Flappy Bird",
+      "description": "Run a Flappy Bird mini-game on the board LCD. Prefer LCD touch; otherwise use a GPIO button. Optional audio on audio_dac.",
+      "author": "ESP-Claw contributor",
+      "category": "game",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "display"
+      ],
+      "cap_groups": [
+        "cap_lua"
+      ],
+      "total_size": 21199,
+      "sha256": "d127c7e26db4aa8b040ec1a970333b734a435c15c547f87b2d23a146e838faad",
+      "files": [
+        "SKILL.md",
+        "scripts/flappybird.lua"
+      ]
+    },
+    {
+      "id": "github_repo_star",
+      "title": "GitHub Repository Star",
+      "description": "Fetch the current GitHub star count for a repository through lua_module_call_capability. Defaults to https://github.com/espressif/esp-claw.",
+      "author": "ESP-Claw contributor",
+      "category": "utility",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [],
+      "cap_groups": [
+        "cap_lua",
+        "cap_web_search"
+      ],
+      "total_size": 7708,
+      "sha256": "4633d689a958edf352263dbd34bbbdbb2f00cc582dfd8e7efac88b7680b33137",
+      "files": [
+        "SKILL.md",
+        "scripts/github_repo_star.lua"
+      ]
+    }
+  ]
+}

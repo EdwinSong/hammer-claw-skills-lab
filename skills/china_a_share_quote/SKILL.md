@@ -3,14 +3,24 @@
   "name": "china_a_share_quote",
   "description": "Fetch China A-share stock quote information through lua_module_call_capability and https://qt.gtimg.cn. Defaults to sh688018.",
   "author": "ESP-Claw contributor",
-  "metadata":
-    {
-      "category": ["network"],
-      "tags": ["share", "stock", "info"],
-      "cap_groups": ["cap_lua", "cap_web_search"],
-      "manage_mode": "web"
-    "devices": ["universal"],
-    }
+  "metadata": {
+    "category": [
+      "network"
+    ],
+    "tags": [
+      "share",
+      "stock",
+      "info"
+    ],
+    "cap_groups": [
+      "cap_lua",
+      "cap_web_search"
+    ],
+    "manage_mode": "web",
+    "devices": [
+      "universal"
+    ]
+  }
 }
 ---
 

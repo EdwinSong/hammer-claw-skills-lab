@@ -3,14 +3,24 @@
   "name": "github_repo_star",
   "description": "Fetch the current GitHub star count for a repository through lua_module_call_capability. Defaults to https://github.com/espressif/esp-claw.",
   "author": "ESP-Claw contributor",
-  "metadata":
-    {
-      "category": ["utility"],
-      "tags": ["github", "stars", "info"],
-      "cap_groups": ["cap_lua", "cap_web_search"],
-      "manage_mode": "web"
-    "devices": ["universal"],
-    }
+  "metadata": {
+    "category": [
+      "utility"
+    ],
+    "tags": [
+      "github",
+      "stars",
+      "info"
+    ],
+    "cap_groups": [
+      "cap_lua",
+      "cap_web_search"
+    ],
+    "manage_mode": "web",
+    "devices": [
+      "universal"
+    ]
+  }
 }
 ---
 
