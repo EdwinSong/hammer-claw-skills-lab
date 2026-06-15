@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-15T16:17:01Z",
+  "generated_at": "2026-06-15T16:37:32Z",
   "repo": "HammerMiner/hammer-claw-skills-lab",
   "total": 10,
   "skills": [
@@ -185,8 +185,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 8443,
-      "sha256": "d8d18269305f88166439b1a059b9dfe1bcfc8cdcc9cb311e6b3b5734bee323f5",
+      "total_size": 10320,
+      "sha256": "f6fba831ce19deba70db5cce539724a5e557bdd0936e5ab5106976c09e6a40df",
       "files": [
         "SKILL.md",
         "preview.png",
@@ -213,8 +213,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 9690,
-      "sha256": "23dc17e4dfe304aea1400357ddab8f07e0b3a47da4cb3892fbd98eb9d305a938",
+      "total_size": 12076,
+      "sha256": "2403b23b3a600c3a8c0c56f7904f98d90595f72f83e821fa0cf3356d552b4418",
       "files": [
         "SKILL.md",
         "preview.png",
@@ -241,8 +241,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 16175,
-      "sha256": "3a30c4b6fc4e78c2a35a17e53bd27ae978053890da9547bcf17120cfd34fbf37",
+      "total_size": 23706,
+      "sha256": "33018225d72a613cf2deb8c763803c08a7cfd618e38509dc9648ff5ebd4ca28c",
       "files": [
         "SKILL.md",
         "preview.png",
