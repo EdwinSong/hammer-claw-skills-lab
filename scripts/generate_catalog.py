@@ -62,6 +62,16 @@ def total_size(directory: Path) -> int:
     )
 
 
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main"
+PREVIEW_FILENAME = "preview.png"
+
+
+def preview_url(skill_dir_name: str) -> str | None:
+    """Return preview URL if preview.png exists in the skill directory."""
+    png = SKILLS_DIR / skill_dir_name / PREVIEW_FILENAME
+    return f"{GITHUB_RAW_BASE}/skills/{skill_dir_name}/{PREVIEW_FILENAME}" if png.is_file() else None
+
+
 def main():
     if not SKILLS_DIR.is_dir():
         print(f"ERROR: skills/ directory not found at {SKILLS_DIR}", file=sys.stderr)
@@ -90,6 +100,8 @@ def main():
         if not isinstance(categories, list) or not categories:
             categories = ["utility"]
 
+        preview = preview_url(skill_dir.name)
+
         entry = {
             "id": skill_id,
             "title": title,
@@ -97,6 +109,7 @@ def main():
             "author": meta.get("author", ""),
             "category": categories[0],  # primary category (backward compat)
             "categories": categories,    # all categories (new)
+            "preview_url": preview,      # raw GitHub URL for preview thumbnail
             "devices": metadata.get("devices", ["universal"]),
             "peripherals": metadata.get("peripherals", []),
             "cap_groups": metadata.get("cap_groups", []),

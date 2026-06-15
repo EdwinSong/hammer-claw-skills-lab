@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-15T07:13:56Z",
+  "generated_at": "2026-06-15T07:42:36Z",
   "repo": "HammerMiner/hammer-claw-skills-lab",
   "total": 10,
   "skills": [
@@ -12,6 +12,7 @@
       "categories": [
         "network"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/bilibili_up_fans/preview.png",
       "devices": [
         "universal"
       ],
@@ -20,10 +21,11 @@
         "cap_lua",
         "cap_web_search"
       ],
-      "total_size": 7118,
-      "sha256": "698e6a5d5675681dca7b664f684249db5b344045d8a79904b47996a2bf34d6e5",
+      "total_size": 7689,
+      "sha256": "b3438cfb13c3254f9c311724a65074484cc756d22d4e16906fb26d8a9edc44e9",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/bilibili_up_fans.lua"
       ]
     },
@@ -36,6 +38,7 @@
       "categories": [
         "network"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/china_a_share_quote/preview.png",
       "devices": [
         "universal"
       ],
@@ -44,10 +47,11 @@
         "cap_lua",
         "cap_web_search"
       ],
-      "total_size": 6981,
-      "sha256": "d6aa7606a284bbb117959687bc3c9ac9cfac0d8d5d7c7f8fd62da38c17a4e16d",
+      "total_size": 7538,
+      "sha256": "c776e8520e070c3c44b7b477014aa95082f6955e0923e60023b868501c3a02fa",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/china_a_share_quote.lua"
       ]
     },
@@ -61,6 +65,7 @@
         "utility",
         "ui"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/clock_dial_demo/preview.png",
       "devices": [
         "universal"
       ],
@@ -70,10 +75,11 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 7576,
-      "sha256": "2aa414d765976bb32893ba3f2485c29a485b611bc77e2e77c73e4d7a62bc954d",
+      "total_size": 8150,
+      "sha256": "48ae595da74e0cbf5623b3ce158bf584f4d547f490efc477a190f482188d46e9",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/clock_dial_demo.lua"
       ]
     },
@@ -87,6 +93,7 @@
         "utility",
         "ui"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/codex_usage_dashboard/preview.png",
       "devices": [
         "universal"
       ],
@@ -98,10 +105,11 @@
         "cap_http_request",
         "cap_time"
       ],
-      "total_size": 17965,
-      "sha256": "85f9d39cbbb050836f861b8fdff1c0bb19c2091e64178e7090c347c2f4ea99b9",
+      "total_size": 18522,
+      "sha256": "af28079e542d620b7270c31d7ed74602c2f8a1ee46def84103c6eb0e4c4727c8",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/codex_usage_dashboard.lua"
       ]
     },
@@ -114,6 +122,7 @@
       "categories": [
         "network"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/current_ip_info/preview.png",
       "devices": [
         "universal"
       ],
@@ -122,10 +131,11 @@
         "cap_lua",
         "cap_web_search"
       ],
-      "total_size": 5951,
-      "sha256": "65135e0914a3365622beb0775c3dca2fd3976a3bc5ba3e17a659fd04507d8627",
+      "total_size": 6510,
+      "sha256": "87b0424a7d1c0ed9dde1c9c8e5413e44e5d7329cec9fe3acda46902bf353af2e",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/current_ip_info.lua"
       ]
     },
@@ -138,6 +148,7 @@
       "categories": [
         "utility"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/current_weather/preview.png",
       "devices": [
         "universal"
       ],
@@ -146,10 +157,11 @@
         "cap_lua",
         "cap_web_search"
       ],
-      "total_size": 10050,
-      "sha256": "dd1952171f784c184ff22fb7c39d64bc4b443a29c800846de07b39494dcd71e7",
+      "total_size": 10622,
+      "sha256": "a0c6515a0cfdd257281e8e5dee2cbf95b57b263a949513922022e0b39c397ab2",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/current_weather.lua"
       ]
     },
@@ -163,6 +175,7 @@
         "game",
         "ui"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/dino/preview.png",
       "devices": [
         "universal"
       ],
@@ -172,10 +185,11 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 22595,
-      "sha256": "7b5cf10433ecbdb38c51820af0dcef40f972895709404a8cbca6091d68e08657",
+      "total_size": 23167,
+      "sha256": "7367805ce35e214af70e9823f733dc3f4375b2196b1f1a271a029a97505f3fcd",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/dino.lua"
       ]
     },
@@ -189,6 +203,7 @@
         "game",
         "ui"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/flappybird/preview.png",
       "devices": [
         "universal"
       ],
@@ -198,10 +213,11 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 21211,
-      "sha256": "56a66fb73720f07dbaee604b2539565a6a4789482457f8b87ec866ccb2d1c6e4",
+      "total_size": 21784,
+      "sha256": "16a52013f27d2fa586a54b49b8ff7ad913beb1f96785bbde3386d3019a750c2f",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/flappybird.lua"
       ]
     },
@@ -215,6 +231,7 @@
         "game",
         "ui"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/game_minesweeper/preview.png",
       "devices": [
         "universal"
       ],
@@ -224,10 +241,11 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 15601,
-      "sha256": "3874c0d553e740b64e2239369a619af11bc7ce5bd0180d0f6c1d8b331c1d0baa",
+      "total_size": 16175,
+      "sha256": "3a30c4b6fc4e78c2a35a17e53bd27ae978053890da9547bcf17120cfd34fbf37",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/game_minesweeper.lua"
       ]
     },
@@ -240,6 +258,7 @@
       "categories": [
         "utility"
       ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/github_repo_star/preview.png",
       "devices": [
         "universal"
       ],
@@ -248,10 +267,11 @@
         "cap_lua",
         "cap_web_search"
       ],
-      "total_size": 7708,
-      "sha256": "4633d689a958edf352263dbd34bbbdbb2f00cc582dfd8e7efac88b7680b33137",
+      "total_size": 8249,
+      "sha256": "1c4d4e61a70bb4b779fe200a9c610b8ca16a6d97dc0112e63423868445efbb3d",
       "files": [
         "SKILL.md",
+        "preview.png",
         "scripts/github_repo_star.lua"
       ]
     }
