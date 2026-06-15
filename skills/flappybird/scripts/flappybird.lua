@@ -1,614 +1,216 @@
-local bm = require("board_manager")
-local display = require("display")
-local delay = require("delay")
-local audio_ok, audio = pcall(require, "audio")
+-- ================================================================
+-- flappybird.lua — FLAPPY BIRD (Claw Display Version)
+-- @page_id 8
+-- @name FlappyBird
+-- @desc Tap to flap! Avoid the pipes.
+-- ================================================================
+-- Uses claw_display API only (no board_manager/display/audio)
+-- Compatible with BC08-P4 / Hammer-OS
 
-local lcd_touch_ok, lcd_touch = pcall(require, "lcd_touch")
-local button_ok, button = pcall(require, "button")
+local PAGE = 8
 
-local a = type(args) == "table" and args or {}
-local function int_arg(key, default)
-    local value = a[key]
-    if type(value) == "number" then
-        return math.floor(value)
-    end
-    return default
-end
+-- ── Game Constants ──
+local SCR_W, SCR_H = 720, 1280
+local GAME_Y_TOP = 60   -- below top bar
+local GAME_Y_BOT = SCR_H - 60
+local GAME_H = GAME_Y_BOT - GAME_Y_TOP
 
-local output_codec, board_output_rate, output_channels, output_bits =
-    bm.get_audio_codec_output_params("audio_dac")
+local BIRD_W, BIRD_H = 48, 48
+local BIRD_X = 120
+local GRAVITY = 0.8
+local FLAP_VELOCITY = -9.0
+local PIPE_W = 60
+local PIPE_GAP = 160
+local PIPE_SPEED = 4.0
+local PIPE_SPAWN_FRAMES = 60  -- frames between pipe spawns
+local GROUND_Y = GAME_Y_BOT
 
-local BUTTON_PIN = int_arg("pin", int_arg("button_gpio", 0))
-local BUTTON_ACTIVE_LEVEL = int_arg("active_level", 0)
-local FRAME_MS = 33
-local RUN_TIME_MS = int_arg("run_time_ms", 180000)
-local OUTPUT_SAMPLE_RATE = int_arg("sample_rate_hz", board_output_rate or 16000)
+-- ── Object IDs ──
+local ID_BIRD = 10
+local ID_SCORE = 20
+local ID_INFO = 30
+local ID_RESTART = 40
+local ID_GAMEOVER_TITLE = 50
+local ID_GAMEOVER_SCORE = 60
+local PIPE_IDS_START = 100  -- pipes use 100-199
+local PIPE_COUNT = 0
 
-local GRAVITY = 1.22
-local FLAP_VELOCITY = -7.2
-local PIPE_SPEED = 3.8
-local PIPE_WIDTH = 34
-local PIPE_GAP = 74
-local PIPE_SPAWN_MS = 1500
-local GROUND_HEIGHT = 28
-local BIRD_RADIUS = 10
-local BIRD_X_RATIO = 0.28
-local CLOUD_COUNT = 4
-local PIPE_MARGIN = 42
-local PIPE_STEP = 10
-local MAX_PIPE_SHIFT = 26
-local SOUND_VOLUME = 90
-local UAC_FLUSH_PCM_BYTES = 4000 -- min PCM bytes for UAC host write
-local SFX_FLAP_HZ, SFX_FLAP_MS = 920, 90
-local SFX_SCORE_HZ, SFX_SCORE_MS = 1320, 100
-local SFX_CRASH_HZ, SFX_CRASH_MS = 180, 350
-
-if OUTPUT_SAMPLE_RATE <= 8000 then
-    SFX_FLAP_HZ = 660
-    SFX_SCORE_HZ = 880
-end
-
-local SKY_R, SKY_G, SKY_B = 138, 213, 255
-local SUN_R, SUN_G, SUN_B = 255, 223, 120
-local CLOUD_R, CLOUD_G, CLOUD_B = 248, 252, 255
-local PIPE_R, PIPE_G, PIPE_B = 67, 166, 74
-local PIPE_SHADE_R, PIPE_SHADE_G, PIPE_SHADE_B = 44, 118, 55
-local PIPE_CAP_R, PIPE_CAP_G, PIPE_CAP_B = 102, 204, 96
-local GROUND_R, GROUND_G, GROUND_B = 217, 182, 92
-local DIRT_R, DIRT_G, DIRT_B = 158, 112, 56
-local BIRD_R, BIRD_G, BIRD_B = 255, 229, 76
-local BIRD_WING_R, BIRD_WING_G, BIRD_WING_B = 245, 182, 45
-local BEAK_R, BEAK_G, BEAK_B = 255, 136, 58
-local EYE_R, EYE_G, EYE_B = 36, 32, 32
-local TEXT_R, TEXT_G, TEXT_B = 20, 36, 54
-local PANEL_R, PANEL_G, PANEL_B = 248, 251, 255
-local PANEL_BORDER_R, PANEL_BORDER_G, PANEL_BORDER_B = 98, 132, 168
-local DANGER_R, DANGER_G, DANGER_B = 214, 74, 74
-local input_mode = "none"
-local touch_handle = nil
-local button_handle = nil
-local button_active_level = BUTTON_ACTIVE_LEVEL
-local button_last_level = 1
-local audio_output = nil
-local sfx_cache = {}
-local sfx_pending = nil
-
-local function build_tone_pcm(freq_hz, duration_ms)
-    local rate = OUTPUT_SAMPLE_RATE
-    local frames = math.floor(rate * duration_ms / 1000)
-    if frames <= 0 then
-        return string.rep("\0", UAC_FLUSH_PCM_BYTES)
-    end
-
-    local amp = 18000
-    local phase = 0
-    local step = 2 * math.pi * freq_hz / rate
-    local chunks = {}
-    for i = 1, frames do
-        local s = math.floor(math.sin(phase) * amp + 0.5)
-        phase = phase + step
-        if s > 32767 then
-            s = 32767
-        elseif s < -32768 then
-            s = -32768
-        end
-        local u = s < 0 and (s + 65536) or s
-        chunks[i] = string.char(u % 256, math.floor(u / 256) % 256)
-    end
-
-    local pcm = table.concat(chunks)
-    if #pcm < UAC_FLUSH_PCM_BYTES then
-        pcm = pcm .. string.rep("\0", UAC_FLUSH_PCM_BYTES - #pcm)
-    end
-    return pcm
-end
-
-local function init_sfx_cache()
-    sfx_cache.flap = build_tone_pcm(SFX_FLAP_HZ, SFX_FLAP_MS)
-    sfx_cache.score = build_tone_pcm(SFX_SCORE_HZ, SFX_SCORE_MS)
-    sfx_cache.crash = build_tone_pcm(SFX_CRASH_HZ, SFX_CRASH_MS)
-    sfx_cache.ready = build_tone_pcm(660, 120)
-end
-
-local function request_sfx(kind)
-    local pcm = sfx_cache[kind]
-    if pcm then
-        sfx_pending = { pcm = pcm, tag = kind }
-    end
-end
-
-local function drain_sfx()
-    if not sfx_pending or not audio_output then
-        return
-    end
-
-    local pending = sfx_pending
-    local ok, err = audio_output:write(pending.pcm)
-    if ok then
-        sfx_pending = nil
-        return
-    end
-
-    if err and not tostring(err):find("busy", 1, true) then
-        print(string.format("[lappybird] WARN: %s write failed: %s",
-            pending.tag or "sfx", tostring(err)))
-        sfx_pending = nil
-    end
-end
-
-local function rgb(r, g, b)
-    return { r = r, g = g, b = b }
-end
-
-local panel_handle, io_handle, width, height, panel_if = bm.get_display_lcd_params("display_lcd")
-if not panel_handle then
-    print("[lappybird] ERROR: get_display_lcd_params(display_lcd) failed: " .. tostring(io_handle))
-    return
-end
-
-local ok, err = pcall(display.init, panel_handle, io_handle, width, height, panel_if)
-if not ok then
-    print("[lappybird] ERROR: init failed: " .. tostring(err))
-    return
-end
-
-local screen_created = true
-
-local function cleanup()
-    if button_handle then
-        pcall(button.off, button_handle)
-        pcall(button.close, button_handle)
-        button_handle = nil
-    end
-
-    if audio_output then
-        pcall(audio_output.close, audio_output)
-        audio_output = nil
-    end
-
-    if screen_created then
-        pcall(display.end_frame)
-        pcall(display.deinit)
-        screen_created = false
-    end
-end
-
-width = display.width
-height = display.height
-
-if width <= 0 or height <= 0 then
-    print("[lappybird] ERROR: invalid display size after init")
-    cleanup()
-    return
-end
-
-local play_top = 0
-local play_bottom = height - GROUND_HEIGHT
-local play_height = play_bottom - play_top
-local bird_x = math.floor(width * BIRD_X_RATIO)
+-- ── Game State ──
+local bird_y, bird_vel = 0, 0
+local pipes = {}         -- {x, gap_y}
 local score = 0
-local best_score = 0
 local frame_count = 0
-local state = "title"
-local bird_y = math.floor(play_height * 0.45)
-local bird_vy = 0
-local spawn_timer_ms = 0
-local pipes = {}
-local cloud_offsets = {}
-local touch_consumed = false
-local last_gap_top = nil
+local game_state = "waiting"  -- "waiting", "playing", "game_over"
+local pipe_id_counter = PIPE_IDS_START
 
-math.randomseed(os.time() + width * 13 + height * 17)
-
-for i = 1, CLOUD_COUNT do
-    cloud_offsets[i] = {
-        x = ((i - 1) * width) // CLOUD_COUNT + math.random(0, 24),
-        y = 12 + math.random(0, math.max(10, math.floor(play_height * 0.18))),
-        size = 12 + math.random(0, 10),
-        speed = 0.3 + math.random() * 0.4,
-    }
-end
-
-local function clamp(v, min_v, max_v)
-    if v < min_v then
-        return min_v
-    end
-    if v > max_v then
-        return max_v
-    end
-    return v
-end
-
-local function snap_step(v, step)
-    return (v // step) * step
-end
-
-local function new_pipe(x)
-    local min_gap_top = PIPE_MARGIN
-    local max_gap_top = play_bottom - PIPE_GAP - PIPE_MARGIN
-    local base_gap_top
-
-    if last_gap_top == nil then
-        local range = math.max(0, max_gap_top - min_gap_top)
-        base_gap_top = min_gap_top + math.random(0, range)
-    else
-        local shift = math.random(-MAX_PIPE_SHIFT, MAX_PIPE_SHIFT)
-        base_gap_top = last_gap_top + shift
-    end
-
-    local gap_top = clamp(base_gap_top, min_gap_top, max_gap_top)
-    gap_top = snap_step(gap_top, PIPE_STEP)
-    gap_top = clamp(gap_top, min_gap_top, max_gap_top)
-    last_gap_top = gap_top
-
-    return {
-        x = x,
-        gap_top = gap_top,
-        gap_bottom = gap_top + PIPE_GAP,
-        scored = false,
-    }
-end
-
-local function reset_round(next_state)
-    score = 0
-    bird_y = math.floor(play_height * 0.45)
-    bird_vy = 0
-    spawn_timer_ms = 0
-    last_gap_top = nil
-    pipes = {
-        new_pipe(width + 48),
-        new_pipe(width + 48 + math.floor(width * 0.56)),
-    }
-    state = next_state or "title"
-end
-
-local function flap()
-    bird_vy = FLAP_VELOCITY
-    request_sfx("flap")
-end
-
-local function draw_cloud(x, y, size)
-    display.fill_circle(x, y, size, rgb(CLOUD_R, CLOUD_G, CLOUD_B))
-    display.fill_circle(x + size, y - 2, math.floor(size * 0.85), rgb(CLOUD_R, CLOUD_G, CLOUD_B))
-    display.fill_circle(x + size * 2 - 2, y, math.floor(size * 0.72), rgb(CLOUD_R, CLOUD_G, CLOUD_B))
-    display.fill_rect(x, y - math.floor(size * 0.5), size * 2, size, rgb(CLOUD_R, CLOUD_G, CLOUD_B))
-end
-
-local function draw_background()
-    display.clear(rgb(SKY_R, SKY_G, SKY_B))
-    display.fill_circle(width - 34, 28, 18, rgb(SUN_R, SUN_G, SUN_B))
-
-    for i = 1, CLOUD_COUNT do
-        local cloud = cloud_offsets[i]
-        local drift = math.floor((frame_count * cloud.speed + cloud.x) % (width + 56)) - 28
-        draw_cloud(drift, cloud.y, cloud.size)
-    end
-
-    display.fill_rect(0, play_bottom, width, GROUND_HEIGHT, rgb(GROUND_R, GROUND_G, GROUND_B))
-    display.fill_rect(0, play_bottom + GROUND_HEIGHT - 8, width, 8, rgb(DIRT_R, DIRT_G, DIRT_B))
-
-    local stripe_w = 14
-    for x = 0, width + stripe_w, stripe_w * 2 do
-        local offset = (frame_count * 2) % (stripe_w * 2)
-        display.fill_rect(x - offset, play_bottom, stripe_w, 6, rgb(234, 208, 108))
-    end
-end
-
-local function draw_pipe(pipe)
-    local x = math.floor(pipe.x)
-    local top_h = pipe.gap_top
-    local bottom_y = pipe.gap_bottom
-    local bottom_h = play_bottom - bottom_y
-
-    display.fill_rect(x, 0, PIPE_WIDTH, top_h, rgb(PIPE_R, PIPE_G, PIPE_B))
-    display.fill_rect(x + PIPE_WIDTH - 7, 0, 7, top_h, rgb(PIPE_SHADE_R, PIPE_SHADE_G, PIPE_SHADE_B))
-    display.fill_rect(x - 2, top_h - 10, PIPE_WIDTH + 4, 10, rgb(PIPE_CAP_R, PIPE_CAP_G, PIPE_CAP_B))
-
-    display.fill_rect(x, bottom_y, PIPE_WIDTH, bottom_h, rgb(PIPE_R, PIPE_G, PIPE_B))
-    display.fill_rect(x + PIPE_WIDTH - 7, bottom_y, 7, bottom_h, rgb(PIPE_SHADE_R, PIPE_SHADE_G, PIPE_SHADE_B))
-    display.fill_rect(x - 2, bottom_y, PIPE_WIDTH + 4, 10, rgb(PIPE_CAP_R, PIPE_CAP_G, PIPE_CAP_B))
-end
-
+-- ── Bird Drawing ──
 local function draw_bird()
-    local bx = bird_x
-    local by = math.floor(bird_y)
-    local tilt = math.max(-8, math.min(8, math.floor(bird_vy)))
-    local leg_y = by + BIRD_RADIUS + 2 + (tilt // 2)
-
-    display.fill_circle(bx, by, BIRD_RADIUS, rgb(BIRD_R, BIRD_G, BIRD_B))
-    display.fill_circle(bx - 2, by + 2, math.floor(BIRD_RADIUS * 0.65), rgb(BIRD_WING_R, BIRD_WING_G, BIRD_WING_B))
-    display.fill_triangle(
-        bx + BIRD_RADIUS - 1, by - 2,
-        bx + BIRD_RADIUS + 10, by + 1,
-        bx + BIRD_RADIUS - 1, by + 5,
-        rgb(BEAK_R, BEAK_G, BEAK_B)
-    )
-    display.fill_circle(bx + 3, by - 3, 3, "white")
-    display.fill_circle(bx + 4, by - 3, 1, rgb(EYE_R, EYE_G, EYE_B))
-    display.draw_line(bx - 6, by + BIRD_RADIUS - 2, bx - 2, leg_y, rgb(EYE_R, EYE_G, EYE_B))
-    display.draw_line(bx + 1, by + BIRD_RADIUS - 2, bx + 5, leg_y, rgb(EYE_R, EYE_G, EYE_B))
+    local y = math.floor(bird_y)
+    claw.display.button(PAGE, ID_BIRD, BIRD_X, y, BIRD_W, BIRD_H, "", 0xF5A623)
 end
 
-local function draw_scoreboard()
-    local box_w = 112
-    local left_x = 8
-    local right_x = width - box_w - 8
-
-    display.fill_round_rect(left_x, 8, box_w, 40, 8, rgb(PANEL_R, PANEL_G, PANEL_B))
-    display.draw_round_rect(left_x, 8, box_w, 40, 8, rgb(PANEL_BORDER_R, PANEL_BORDER_G, PANEL_BORDER_B))
-    display.draw_text(left_x + 8, 18, "SCORE " .. tostring(score), {
-        color = rgb(TEXT_R, TEXT_G, TEXT_B),
-        font_size = 14,
-        bg = rgb(PANEL_R, PANEL_G, PANEL_B),
-    })
-
-    display.fill_round_rect(right_x, 8, box_w, 40, 8, rgb(PANEL_R, PANEL_G, PANEL_B))
-    display.draw_round_rect(right_x, 8, box_w, 40, 8, rgb(PANEL_BORDER_R, PANEL_BORDER_G, PANEL_BORDER_B))
-    display.draw_text(right_x + 8, 18, "BEST " .. tostring(best_score), {
-        color = rgb(TEXT_R, TEXT_G, TEXT_B),
-        font_size = 14,
-        bg = rgb(PANEL_R, PANEL_G, PANEL_B),
-    })
-end
-
-local function draw_center_panel(title, subtitle, subtitle_color)
-    local panel_w = math.min(width - 8, 232)
-    local panel_h = 88
-    local panel_x = (width - panel_w) // 2
-    local panel_y = math.floor(play_height * 0.18)
-
-    display.fill_round_rect(panel_x, panel_y, panel_w, panel_h, 12, rgb(PANEL_R, PANEL_G, PANEL_B))
-    display.draw_round_rect(panel_x, panel_y, panel_w, panel_h, 12, rgb(PANEL_BORDER_R, PANEL_BORDER_G, PANEL_BORDER_B))
-    display.draw_text_aligned(panel_x, panel_y + 8, panel_w, 24, title, {
-        color = rgb(TEXT_R, TEXT_G, TEXT_B),
-        font_size = 22,
-        bg = rgb(PANEL_R, PANEL_G, PANEL_B),
-        align = "center",
-        valign = "middle",
-    })
-    display.draw_text_aligned(panel_x + 12, panel_y + 42, panel_w - 24, 18, subtitle, {
-        color = subtitle_color,
-        font_size = 14,
-        bg = rgb(PANEL_R, PANEL_G, PANEL_B),
-        align = "center",
-        valign = "middle",
-    })
-end
-
-local function action_label(verb)
-    if input_mode == "lcd_touch" then
-        return "tap to " .. verb
+-- ── Pipe Drawing ──
+local function draw_pipe(pipe, top_id, bot_id)
+    local x = math.floor(pipe.x)
+    local gap_y = pipe.gap_y
+    -- Top pipe (above gap)
+    local top_h = gap_y - GAME_Y_TOP
+    if top_h > 0 then
+        claw.display.button(PAGE, top_id, x, GAME_Y_TOP, PIPE_W, top_h, "", 0x34C759)
     end
-    if input_mode == "button" then
-        return "press button to " .. verb
-    end
-    return verb
-end
-
-local function render()
-    draw_background()
-
-    for i = 1, #pipes do
-        draw_pipe(pipes[i])
-    end
-
-    draw_bird()
-    draw_scoreboard()
-
-    if state == "title" then
-        draw_center_panel("Lappy Bird", action_label("start") .. " and " .. action_label("flap"), { r = 44, g = 86, b = 128 })
-    elseif state == "crashed" then
-        draw_center_panel("Crash", action_label("restart"), { r = DANGER_R, g = DANGER_G, b = DANGER_B })
-    end
-
-    display.present()
-end
-
-local function circle_rect_hit(cx, cy, radius, rx, ry, rw, rh)
-    local nearest_x = math.max(rx, math.min(cx, rx + rw))
-    local nearest_y = math.max(ry, math.min(cy, ry + rh))
-    local dx = cx - nearest_x
-    local dy = cy - nearest_y
-    return dx * dx + dy * dy <= radius * radius
-end
-
-local function set_crashed()
-    if state == "crashed" then
-        return
-    end
-    if score > best_score then
-        best_score = score
-    end
-    request_sfx("crash")
-    state = "crashed"
-end
-
-local function update_playing()
-    bird_vy = bird_vy + GRAVITY
-    bird_y = bird_y + bird_vy
-    spawn_timer_ms = spawn_timer_ms + FRAME_MS
-
-    if spawn_timer_ms >= PIPE_SPAWN_MS then
-        spawn_timer_ms = spawn_timer_ms - PIPE_SPAWN_MS
-        pipes[#pipes + 1] = new_pipe(width + PIPE_WIDTH + 8)
-    end
-
-    for i = #pipes, 1, -1 do
-        local pipe = pipes[i]
-        pipe.x = pipe.x - PIPE_SPEED
-
-        if not pipe.scored and pipe.x + PIPE_WIDTH < bird_x then
-            pipe.scored = true
-            score = score + 1
-            if score > best_score then
-                best_score = score
-            end
-            request_sfx("score")
-        end
-
-        if pipe.x + PIPE_WIDTH < -4 then
-            table.remove(pipes, i)
-        elseif circle_rect_hit(bird_x, bird_y, BIRD_RADIUS, pipe.x, 0, PIPE_WIDTH, pipe.gap_top)
-            or circle_rect_hit(bird_x, bird_y, BIRD_RADIUS, pipe.x, pipe.gap_bottom, PIPE_WIDTH, play_bottom - pipe.gap_bottom) then
-            set_crashed()
-        end
-    end
-
-    if bird_y - BIRD_RADIUS <= play_top or bird_y + BIRD_RADIUS >= play_bottom then
-        set_crashed()
+    -- Bottom pipe (below gap)
+    local bot_y = gap_y + PIPE_GAP
+    local bot_h = GAME_Y_BOT - bot_y
+    if bot_h > 0 then
+        claw.display.button(PAGE, bot_id, x, bot_y, PIPE_W, bot_h, "", 0x34C759)
     end
 end
 
-local function init_input()
-    if lcd_touch_ok then
-        local touch_err
-        touch_handle, touch_err = bm.get_lcd_touch_handle("lcd_touch")
-        if touch_handle then
-            ok, err = pcall(lcd_touch.sync, touch_handle)
-            if ok then
-                input_mode = "lcd_touch"
-                return true
-            end
-            print("[lappybird] WARN: lcd_touch.sync failed: " .. tostring(err))
-        else
-            print("[lappybird] WARN: get_lcd_touch_handle(lcd_touch) failed: " .. tostring(touch_err))
-        end
-    else
-        print("[lappybird] WARN: require(lcd_touch) failed")
+-- ── Clear Pipe ──
+local function clear_pipe(pipe)
+    -- Remove old pipe objects by drawing over them (button with bg color)
+    if pipe.top_id then
+        claw.display.button(PAGE, pipe.top_id, 0, 0, 0, 0, "", 0)  -- hide
     end
-
-    if not button_ok then
-        print("[lappybird] ERROR: require(button) failed")
-        return false
+    if pipe.bot_id then
+        claw.display.button(PAGE, pipe.bot_id, 0, 0, 0, 0, "", 0)
     end
-
-    local button_err
-    button_handle, button_err = button.new(BUTTON_PIN, button_active_level)
-    if not button_handle then
-        print("[lappybird] ERROR: button.new failed on gpio " .. tostring(BUTTON_PIN) .. ": " .. tostring(button_err))
-        return false
-    end
-
-    local level, level_err = button.get_key_level(button_handle)
-    if level == nil then
-        print("[lappybird] ERROR: button.get_key_level failed: " .. tostring(level_err))
-        cleanup()
-        return false
-    end
-    button_last_level = level
-
-    input_mode = "button"
-    return true
 end
 
-local function consume_input_tap()
-    if input_mode == "lcd_touch" then
-        local polled, info = pcall(lcd_touch.poll, touch_handle)
-        if not polled then
-            print("[lappybird] ERROR: lcd_touch.poll failed: " .. tostring(info))
-            return nil
-        end
+-- ── Score Display ──
+local function update_score()
+    claw.display.label(PAGE, ID_SCORE, SCR_W/2 - 40, GAME_Y_TOP + 4, tostring(score), 0xFFFFFF, 36)
+end
 
-        local tapped = info.just_pressed and not touch_consumed
-        touch_consumed = info.pressed
-        return tapped
-    end
+-- ── Collision Check ──
+local function check_collision(pipe)
+    local bx1, bx2 = BIRD_X, BIRD_X + BIRD_W
+    local by1, by2 = bird_y, bird_y + BIRD_H
+    local px1, px2 = pipe.x, pipe.x + PIPE_W
 
-    if input_mode == "button" then
-        local level, level_err = button.get_key_level(button_handle)
-        if level == nil then
-            print("[lappybird] ERROR: button.get_key_level failed: " .. tostring(level_err))
-            return nil
-        end
+    if bx2 < px1 or bx1 > px2 then return false end
 
-        local tapped = level == button_active_level and button_last_level ~= button_active_level
-        button_last_level = level
-        return tapped
-    end
+    -- Check top pipe
+    if by1 < pipe.gap_y then return true end
+    -- Check bottom pipe
+    if by2 > pipe.gap_y + PIPE_GAP then return true end
 
     return false
 end
 
-local function init_audio()
-    if not audio_ok then
-        print("[lappybird] WARN: require(audio) failed")
-        return
-    end
+-- ── New Game ──
+local function new_game()
+    claw.display.clear_page(PAGE)
+    claw.display.create_page(PAGE, "FLAPPY BIRD")
+    bird_y = GAME_Y_TOP + GAME_H / 2
+    bird_vel = 0
+    pipes = {}
+    score = 0
+    frame_count = 0
+    game_state = "waiting"
+    pipe_id_counter = PIPE_IDS_START
 
-    if not output_codec then
-        print("[lappybird] WARN: get_audio_codec_output_params(audio_dac) failed: " .. tostring(board_output_rate))
-        return
-    end
-
-    local ok_out, output = pcall(function()
-        return audio.new_output({
-            codec = output_codec,
-            sample_rate = OUTPUT_SAMPLE_RATE,
-            channels = output_channels,
-            bits = output_bits,
-            volume = SOUND_VOLUME,
-        })
-    end)
-    if not ok_out or not output then
-        print("[lappybird] WARN: audio init failed: " .. tostring(output))
-        return
-    end
-
-    local info = output:info()
-    print(string.format("[lappybird] audio %dHz/%dch/%dbit (requested %dHz)",
-        info.sample_rate, info.channels, info.bits, OUTPUT_SAMPLE_RATE))
-
-    audio_output = output
-    init_sfx_cache()
-    request_sfx("ready")
+    draw_bird()
+    update_score()
+    claw.display.label(PAGE, ID_INFO, SCR_W/2 - 80, GAME_Y_TOP + GAME_H/2 - 30, "TAP TO START", 0xAAAAAA, 24)
+    -- Hidden restart button (shown on game over)
+    claw.display.button(PAGE, ID_RESTART, 0, 0, 0, 0, "", 0)
 end
 
-if not init_input() then
-    cleanup()
-    return
+-- ── Game Over ──
+local function game_over()
+    game_state = "game_over"
+    claw.display.label(PAGE, ID_GAMEOVER_TITLE, SCR_W/2 - 100, GAME_Y_TOP + GAME_H/2 - 60, "GAME OVER", 0xFF3B30, 36)
+    claw.display.label(PAGE, ID_GAMEOVER_SCORE, SCR_W/2 - 60, GAME_Y_TOP + GAME_H/2, "Score: " .. score, 0xFFFFFF, 24)
+    claw.display.button(PAGE, ID_RESTART, SCR_W/2 - 80, GAME_Y_TOP + GAME_H/2 + 50, 160, 60, "", 0x30D158)
+    claw.display.label(PAGE, ID_RESTART + 1, SCR_W/2 - 40, GAME_Y_TOP + GAME_H/2 + 66, "RESTART", 0xFFFFFF, 24)
 end
 
-init_audio()
+-- ── Main ──
+new_game()
 
-reset_round("title")
-
-display.begin_frame({ clear = true, color = rgb(SKY_R, SKY_G, SKY_B) })
-
-print(string.format("[lappybird] ready screen=%dx%d run_ms=%d", width, height, RUN_TIME_MS))
-if input_mode == "lcd_touch" then
-    print("[lappybird] lcd_touch ready, tap anywhere to flap, tap after crashing to restart")
-else
-    print(string.format("[lappybird] button gpio=%d active_level=%d", BUTTON_PIN, button_active_level))
-end
-
-for _ = 1, RUN_TIME_MS // FRAME_MS do
-    drain_sfx()
-
-    local tapped = consume_input_tap()
-    if tapped == nil then
-        break
-    end
-
-    if tapped then
-        if state == "title" then
-            reset_round("playing")
-            flap()
-        elseif state == "playing" then
-            flap()
-        elseif state == "crashed" then
-            reset_round("playing")
-            flap()
+while true do
+    local pid, oid = claw.display.pop_event()
+    
+    if pid == PAGE then
+        if oid == ID_RESTART then
+            new_game()
+            goto continue
+        end
+        
+        if game_state == "waiting" or game_state == "playing" then
+            -- Any click = flap
+            if game_state == "waiting" then
+                game_state = "playing"
+                -- Clear info text
+                claw.display.label(PAGE, ID_INFO, 0, 0, "", 0, 0)
+            end
+            if game_state == "playing" then
+                bird_vel = FLAP_VELOCITY
+            end
         end
     end
-
-    if state == "playing" then
-        update_playing()
+    
+    if game_state == "playing" then
+        ::continue::
+        -- Physics
+        bird_vel = bird_vel + GRAVITY
+        bird_y = bird_y + bird_vel
+        
+        -- Ground/ceiling check
+        if bird_y <= GAME_Y_TOP then bird_y = GAME_Y_TOP; bird_vel = 0 end
+        if bird_y >= GROUND_Y - BIRD_H then bird_y = GROUND_Y - BIRD_H; game_over(); end
+        
+        draw_bird()
+        
+        -- Spawn pipes
+        frame_count = frame_count + 1
+        if frame_count % PIPE_SPAWN_FRAMES == 0 then
+            local gap_y = GAME_Y_TOP + math.random(60, GAME_H - PIPE_GAP - 40)
+            local pipe = {
+                x = SCR_W + PIPE_W,
+                gap_y = gap_y,
+                top_id = pipe_id_counter,
+                bot_id = pipe_id_counter + 1,
+                scored = false
+            }
+            pipe_id_counter = pipe_id_counter + 2
+            pipes[#pipes + 1] = pipe
+            draw_pipe(pipe, pipe.top_id, pipe.bot_id)
+        end
+        
+        -- Move & check pipes
+        local to_remove = {}
+        for i, pipe in ipairs(pipes) do
+            clear_pipe(pipe)
+            pipe.x = pipe.x - PIPE_SPEED
+            if pipe.x > -PIPE_W then
+                draw_pipe(pipe, pipe.top_id, pipe.bot_id)
+            end
+            
+            -- Score
+            if not pipe.scored and pipe.x + PIPE_W < BIRD_X then
+                pipe.scored = true
+                score = score + 1
+                update_score()
+            end
+            
+            -- Collision
+            if check_collision(pipe) then
+                game_over()
+            end
+            
+            -- Remove off-screen
+            if pipe.x < -PIPE_W - 20 then
+                to_remove[#to_remove + 1] = i
+            end
+        end
+        
+        -- Remove off-screen pipes (reverse order)
+        for i = #to_remove, 1, -1 do
+            table.remove(pipes, to_remove[i])
+        end
     end
-
-    render()
-    frame_count = frame_count + 1
-    delay.delay_ms(FRAME_MS)
+    
+    delay.delay_ms(33)  -- ~30 FPS
 end
-
-cleanup()
-print("[lappybird] done")
