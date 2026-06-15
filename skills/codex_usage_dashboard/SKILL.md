@@ -5,7 +5,7 @@
   "metadata": {
     "category": [
       "utility",
-      "ai"
+      "ui"
     ],
     "tags": [
       "codex",

@@ -86,14 +86,17 @@ def main():
         skill_id = meta.get("name", skill_dir.name)
         metadata = meta.get("metadata", {})
 
+        categories = metadata.get("category", ["utility"])
+        if not isinstance(categories, list) or not categories:
+            categories = ["utility"]
+
         entry = {
             "id": skill_id,
             "title": title,
             "description": meta.get("description", ""),
             "author": meta.get("author", ""),
-            "category": metadata.get("category", ["utility"])[0]
-                       if isinstance(metadata.get("category"), list) and metadata["category"]
-                       else "utility",
+            "category": categories[0],  # primary category (backward compat)
+            "categories": categories,    # all categories (new)
             "devices": metadata.get("devices", ["universal"]),
             "peripherals": metadata.get("peripherals", []),
             "cap_groups": metadata.get("cap_groups", []),

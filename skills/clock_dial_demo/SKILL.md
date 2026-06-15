@@ -5,7 +5,8 @@
   "author": "ESP-Claw contributor",
   "metadata": {
     "category": [
-      "utility"
+      "utility",
+      "ui"
     ],
     "tags": [
       "clock",

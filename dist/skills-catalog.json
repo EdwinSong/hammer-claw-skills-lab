@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-06-13T14:02:13Z",
+  "generated_at": "2026-06-15T07:13:56Z",
   "repo": "HammerMiner/hammer-claw-skills-lab",
-  "total": 9,
+  "total": 10,
   "skills": [
     {
       "id": "bilibili_up_fans",
@@ -9,6 +9,9 @@
       "description": "Fetch the current Bilibili UP creator fan count through lua_module_call_capability. Defaults to 乐鑫信息科技.",
       "author": "ESP-Claw contributor",
       "category": "network",
+      "categories": [
+        "network"
+      ],
       "devices": [
         "universal"
       ],
@@ -30,6 +33,9 @@
       "description": "Fetch China A-share stock quote information through lua_module_call_capability and https://qt.gtimg.cn. Defaults to sh688018.",
       "author": "ESP-Claw contributor",
       "category": "network",
+      "categories": [
+        "network"
+      ],
       "devices": [
         "universal"
       ],
@@ -51,6 +57,10 @@
       "description": "An animated analog clock dial rendered on the on-board LCD, with hour/minute/second hands and a dark themed face.",
       "author": "ESP-Claw contributor",
       "category": "utility",
+      "categories": [
+        "utility",
+        "ui"
+      ],
       "devices": [
         "universal"
       ],
@@ -60,8 +70,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 7564,
-      "sha256": "a3c2de85b8f95bfa96218515a53f552ed316f703bf62b0e2a89069273b4acf19",
+      "total_size": 7576,
+      "sha256": "2aa414d765976bb32893ba3f2485c29a485b611bc77e2e77c73e4d7a62bc954d",
       "files": [
         "SKILL.md",
         "scripts/clock_dial_demo.lua"
@@ -73,6 +83,10 @@
       "description": "Show a Codex usage quota dashboard on the board display from a configured JSON endpoint, including 5-hour and weekly reset status.",
       "author": "",
       "category": "utility",
+      "categories": [
+        "utility",
+        "ui"
+      ],
       "devices": [
         "universal"
       ],
@@ -85,7 +99,7 @@
         "cap_time"
       ],
       "total_size": 17965,
-      "sha256": "3d51be86d211019e118fe1e8ad9de4bc8aade316baa12e308e147ba300674f6e",
+      "sha256": "85f9d39cbbb050836f861b8fdff1c0bb19c2091e64178e7090c347c2f4ea99b9",
       "files": [
         "SKILL.md",
         "scripts/codex_usage_dashboard.lua"
@@ -97,6 +111,9 @@
       "description": "Fetch the current public IP geolocation information through lua_module_call_capability and https://ipinfo.io/json.",
       "author": "ESP-Claw contributor",
       "category": "network",
+      "categories": [
+        "network"
+      ],
       "devices": [
         "universal"
       ],
@@ -118,6 +135,9 @@
       "description": "Fetch current weather through lua_module_call_capability and https://api.open-meteo.com. Defaults to Singapore.",
       "author": "ESP-Claw contributor",
       "category": "utility",
+      "categories": [
+        "utility"
+      ],
       "devices": [
         "universal"
       ],
@@ -139,6 +159,10 @@
       "description": "Run a Chrome offline-style Dino jumping runner on the board LCD. Use when the user asks for Dino, dinosaur game, runner game, jump game, LCD touch game, or GPIO button game.",
       "author": "ESP-Claw contributor",
       "category": "game",
+      "categories": [
+        "game",
+        "ui"
+      ],
       "devices": [
         "universal"
       ],
@@ -148,8 +172,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 22583,
-      "sha256": "bc6299785fee0162894f8e93bae7c317d86cc4acc0bbbe51a72d8b5e4abf1945",
+      "total_size": 22595,
+      "sha256": "7b5cf10433ecbdb38c51820af0dcef40f972895709404a8cbca6091d68e08657",
       "files": [
         "SKILL.md",
         "scripts/dino.lua"
@@ -161,6 +185,10 @@
       "description": "Run a Flappy Bird mini-game on the board LCD. Prefer LCD touch; otherwise use a GPIO button. Optional audio on audio_dac.",
       "author": "ESP-Claw contributor",
       "category": "game",
+      "categories": [
+        "game",
+        "ui"
+      ],
       "devices": [
         "universal"
       ],
@@ -170,11 +198,37 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 21199,
-      "sha256": "d127c7e26db4aa8b040ec1a970333b734a435c15c547f87b2d23a146e838faad",
+      "total_size": 21211,
+      "sha256": "56a66fb73720f07dbaee604b2539565a6a4789482457f8b87ec866ccb2d1c6e4",
       "files": [
         "SKILL.md",
         "scripts/flappybird.lua"
+      ]
+    },
+    {
+      "id": "game_minesweeper",
+      "title": "Game MineSweeper",
+      "description": "Run a premium animated Minesweeper game on the board LCD with 5x5 grid, multiple levels (1-5), flag mode, explosion ripple animation, and victory celebration screen. Touch-driven with dark-themed LVGL UI.",
+      "author": "HammerMiner",
+      "category": "game",
+      "categories": [
+        "game",
+        "ui"
+      ],
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "display"
+      ],
+      "cap_groups": [
+        "cap_lua"
+      ],
+      "total_size": 15601,
+      "sha256": "3874c0d553e740b64e2239369a619af11bc7ce5bd0180d0f6c1d8b331c1d0baa",
+      "files": [
+        "SKILL.md",
+        "scripts/game_minesweeper.lua"
       ]
     },
     {
@@ -183,6 +237,9 @@
       "description": "Fetch the current GitHub star count for a repository through lua_module_call_capability. Defaults to https://github.com/espressif/esp-claw.",
       "author": "ESP-Claw contributor",
       "category": "utility",
+      "categories": [
+        "utility"
+      ],
       "devices": [
         "universal"
       ],

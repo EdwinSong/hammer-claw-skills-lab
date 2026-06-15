@@ -5,7 +5,8 @@
   "author": "ESP-Claw contributor",
   "metadata": {
     "category": [
-      "game"
+      "game",
+      "ui"
     ],
     "tags": [
       "dino",
