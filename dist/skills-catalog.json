@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-16T06:03:51Z",
+  "generated_at": "2026-06-16T06:32:15Z",
   "repo": "HammerMiner/hammer-claw-skills-lab",
   "total": 10,
   "skills": [
@@ -213,8 +213,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 12110,
-      "sha256": "2479570aee7a70d3d684fe466492f2e2fe1a549fe5e443cddb99654fc560a762",
+      "total_size": 11329,
+      "sha256": "9fee627e55e49f3068c59cf4d861e81b1b521e83faaea2eeed5a6d2569a5c276",
       "files": [
         "SKILL.md",
         "preview.png",
