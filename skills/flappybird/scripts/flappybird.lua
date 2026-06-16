@@ -131,11 +131,12 @@ new_game()
 
 while true do
     local pid, oid = claw.display.pop_event()
+    local skip_update = false
     
     if pid == PAGE then
         if oid == ID_RESTART then
             new_game()
-            goto continue
+            skip_update = true
         end
         
         if game_state == "waiting" or game_state == "playing" then
@@ -151,8 +152,7 @@ while true do
         end
     end
     
-    if game_state == "playing" then
-        ::continue::
+    if game_state == "playing" and not skip_update then
         -- Physics
         bird_vel = bird_vel + GRAVITY
         bird_y = bird_y + bird_vel
