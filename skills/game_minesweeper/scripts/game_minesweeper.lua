@@ -149,7 +149,6 @@ end
 local function victory_screen()
     game_state = "victory"
     claw.display.clear_page(PAGE)
-    delay.delay_ms(200)
     
     -- Main Page Title (always below top bar y=58)
     claw.display.label(PAGE, 104, 48, 70, "MINESWEEPER", 0x00E5FF, 24)
@@ -177,7 +176,6 @@ end
 local function game_over_screen()
     game_state = "game_over"
     claw.display.clear_page(PAGE)
-    delay.delay_ms(200)
     
     -- Main Page Title (always below top bar y=58)
     claw.display.label(PAGE, 104, 48, 70, "MINESWEEPER", 0x00E5FF, 24)
@@ -317,9 +315,6 @@ local function new_game()
     claw.display.create_page(PAGE, "MINESWEEPER")
     game_over = false; first_click = true; flag_mode = false
     init_grid()
-    
-    -- Wait for claw_display to process the page creation asynchronously
-    delay.delay_ms(200)
     
     -- Main Page Title (always below top bar y=58)
     claw.display.label(PAGE, 104, 48, 70, "MINESWEEPER", 0x00E5FF, 24)
