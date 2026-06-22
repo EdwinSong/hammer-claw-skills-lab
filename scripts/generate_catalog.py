@@ -66,7 +66,7 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com/HammerMiner/hammer-claw-ski
 PREVIEW_FILENAME = "preview.png"
 
 
-def preview_url(skill_dir_name: str) -> str | None:
+def preview_url(skill_dir_name: str):
     """Return preview URL if preview.png exists in the skill directory."""
     png = SKILLS_DIR / skill_dir_name / PREVIEW_FILENAME
     return f"{GITHUB_RAW_BASE}/skills/{skill_dir_name}/{PREVIEW_FILENAME}" if png.is_file() else None

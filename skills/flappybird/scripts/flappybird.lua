@@ -4,7 +4,6 @@
 -- @name FlappyBird
 -- @desc Tap to flap! Avoid the pipes.
 -- ================================================================
--- Uses claw_display API only. Compatible with BC08-P4 / Hammer-OS
 
 local PAGE = 8
 
@@ -20,13 +19,12 @@ local FLAP_VEL = -8.0
 local PIPE_W = 60
 local PIPE_GAP = 200
 local PIPE_SPEED = 3.0
-local PIPE_SPAWN_MS = 2000
 
 -- Object IDs
-local ID_BIRD = 10
-local ID_SCORE = 20
-local ID_MSG = 30
-local ID_RESTART = 40
+local ID_BIRD        = 10
+local ID_SCORE       = 20
+local ID_MSG         = 30
+local ID_RESTART     = 40
 local ID_RESTART_LBL = 41
 
 -- State
@@ -36,16 +34,9 @@ local score = 0
 local state = "waiting"  -- waiting, playing, over
 local last_spawn = 0
 local last_flap = 0
-
--- Pipe struct: {x, gap_y, top_id, bot_id, scored}
 local next_pipe_id = 100
 
--- Helpers
-local function millis()
-    return claw.display.pop_event and os.time() * 1000 or 0
-end
-
--- Drawing
+-- ── Drawing ──
 local function draw_bird()
     local y = math.floor(bird_y)
     claw.display.button(PAGE, ID_BIRD, BIRD_X, y, BIRD_SIZE, BIRD_SIZE, "", 0xFFB700)
@@ -58,7 +49,7 @@ local function draw_pipe(p)
     if th > 0 then
         claw.display.button(PAGE, p.top_id, x, GAME_TOP, PIPE_W, th, "", 0x30C050)
     end
-    -- Bottom pipe  
+    -- Bottom pipe
     local by = p.gap_y + PIPE_GAP
     local bh = GAME_BOT - by
     if bh > 0 then
@@ -72,27 +63,27 @@ local function hide_pipe(p)
 end
 
 local function update_score()
-    claw.display.label(PAGE, ID_SCORE, SCR_W/2 - 30, GAME_TOP + 8, tostring(score), 0xFFFFFF, 42)
+    claw.display.label(PAGE, ID_SCORE, SCR_W / 2 - 30, GAME_TOP + 8, tostring(score), 0xFFFFFF, 42)
 end
 
 local function show_msg(text, color)
     color = color or 0xAAAAAA
-    claw.display.label(PAGE, ID_MSG, SCR_W/2 - 150, GAME_TOP + (GAME_BOT-GAME_TOP)/2 - 20, text, color, 24)
+    claw.display.label(PAGE, ID_MSG, SCR_W / 2 - 150, GAME_TOP + (GAME_BOT - GAME_TOP) / 2 - 20, text, color, 24)
 end
 
--- Collision: AABB with margin
+-- ── Collision ──
 local function hit_test(p)
     local bx1 = BIRD_X + 8
     local bx2 = BIRD_X + BIRD_SIZE - 8
     local by1 = bird_y + 8
     local by2 = bird_y + BIRD_SIZE - 8
-    
+
     if bx2 < p.x or bx1 > p.x + PIPE_W then return false end
     if by1 < p.gap_y or by2 > p.gap_y + PIPE_GAP then return true end
     return false
 end
 
--- Game flow
+-- ── Game flow ──
 local function new_game()
     claw.display.clear_page(PAGE)
     claw.display.create_page(PAGE, "FLAPPY BIRD")
@@ -104,10 +95,11 @@ local function new_game()
     last_spawn = 0
     last_flap = 0
     next_pipe_id = 100
-    
+
     draw_bird()
     update_score()
     show_msg("TAP TO START")
+
     -- Hidden restart button (shown on game over)
     claw.display.button(PAGE, ID_RESTART, 0, 0, 0, 0, "", 0)
     claw.display.label(PAGE, ID_RESTART_LBL, 0, 0, "", 0, 0)
@@ -115,20 +107,23 @@ end
 
 local function show_game_over()
     state = "over"
-    claw.display.label(PAGE, ID_MSG, SCR_W/2 - 100, GAME_TOP + (GAME_BOT-GAME_TOP)/2 - 40, "GAME OVER", 0xFF3B30, 36)
-    claw.display.label(PAGE, ID_SCORE, SCR_W/2 - 60, GAME_TOP + (GAME_BOT-GAME_TOP)/2 + 10, "Score: "..score, 0xFFFFFF, 24)
-    claw.display.button(PAGE, ID_RESTART, SCR_W/2 - 80, GAME_TOP + (GAME_BOT-GAME_TOP)/2 + 60, 160, 60, "", 0x30D158)
-    claw.display.label(PAGE, ID_RESTART_LBL, SCR_W/2 - 35, GAME_TOP + (GAME_BOT-GAME_TOP)/2 + 76, "RESTART", 0xFFFFFF, 22)
+    claw.display.label(PAGE, ID_MSG, SCR_W / 2 - 100, GAME_TOP + (GAME_BOT - GAME_TOP) / 2 - 40, "GAME OVER", 0xFF3B30, 36)
+    claw.display.label(PAGE, ID_SCORE, SCR_W / 2 - 60, GAME_TOP + (GAME_BOT - GAME_TOP) / 2 + 10, "Score: " .. score, 0xFFFFFF, 24)
+    claw.display.button(PAGE, ID_RESTART, SCR_W / 2 - 80, GAME_TOP + (GAME_BOT - GAME_TOP) / 2 + 60, 160, 60, "", 0x30D158)
+    claw.display.label(PAGE, ID_RESTART_LBL, SCR_W / 2 - 35, GAME_TOP + (GAME_BOT - GAME_TOP) / 2 + 76, "RESTART", 0xFFFFFF, 22)
 end
 
--- Main
+-- ════════════════════════════════════════════════════
+-- MAIN ENTRY
+-- ════════════════════════════════════════════════════
 new_game()
 
+-- Main Polling Loop
 local tick = 0
 while true do
     local pid, oid = claw.display.pop_event()
     tick = tick + 1
-    
+
     if pid == PAGE then
         if oid == ID_RESTART and state == "over" then
             new_game()
@@ -138,35 +133,35 @@ while true do
             last_flap = tick
             show_msg("")
         elseif state == "playing" then
-            -- Cooldown: max 1 flap per 5 ticks (~150ms)
+            -- Cooldown: max 1 flap per 5 ticks (~165ms)
             if tick - last_flap > 5 then
                 bird_vel = FLAP_VEL
                 last_flap = tick
             end
         end
     end
-    
+
     if state == "playing" then
         -- Physics
         bird_vel = bird_vel + GRAVITY
         bird_y = bird_y + bird_vel
-        
-        -- Clamp to ceiling
+
+        -- Ceiling clamp
         if bird_y < GAME_TOP then
             bird_y = GAME_TOP
             bird_vel = 0
         end
-        
+
         -- Ground hit
         if bird_y + BIRD_SIZE >= GAME_BOT then
             bird_y = GAME_BOT - BIRD_SIZE
             show_game_over()
         end
-        
+
         draw_bird()
-        
+
         -- Spawn pipes
-        if tick - last_spawn > 60 then  -- ~2 seconds at 30fps
+        if tick - last_spawn > 60 then  -- ~2 seconds at ~30fps
             last_spawn = tick
             local gap_y = GAME_TOP + 60 + math.random(0, GAME_BOT - GAME_TOP - PIPE_GAP - 120)
             local p = {
@@ -180,14 +175,14 @@ while true do
             pipes[#pipes + 1] = p
             draw_pipe(p)
         end
-        
+
         -- Move pipes
         local i = 1
         while i <= #pipes do
             local p = pipes[i]
             hide_pipe(p)
             p.x = p.x - PIPE_SPEED
-            
+
             if p.x > -PIPE_W then
                 draw_pipe(p)
                 -- Score
@@ -206,6 +201,6 @@ while true do
             end
         end
     end
-    
+
     delay.delay_ms(33)
 end

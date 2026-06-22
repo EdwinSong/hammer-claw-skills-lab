@@ -1,8 +1,8 @@
 ---
 {
   "name": "clock_dial_demo",
-  "description": "An animated analog clock dial rendered on the on-board LCD, with hour/minute/second hands and a dark themed face.",
-  "author": "ESP-Claw contributor",
+  "description": "Premium animated digital clock on the board LCD with dark-themed glassmorphic UI, date display, touch toggle between 12h/24h mode, and smooth second-pulse animation.",
+  "author": "HammerMiner",
   "metadata": {
     "category": [
       "utility",
@@ -12,7 +12,8 @@
       "clock",
       "watchface",
       "dial",
-      "demo"
+      "digital",
+      "lcd"
     ],
     "peripherals": [
       "display"
@@ -30,18 +31,18 @@
 
 # Clock Dial Demo
 
-Use this skill when the user asks for a clock, watch face, dial, time
-display, or a generic display demo on the board.
+Use this skill when the user asks for a clock, watch face, time display,
+dial, or a premium LCD demo on the board.
 
-The Lua script reads the system time and draws an animated analog clock face
-on the LCD. The hour, minute, and second hands sweep in real time on a dark
-themed dial with major/minor ticks and a digital sub-text.
+The Lua script renders an animated digital clock on the LCD using the
+claw.display API, with a dark glassmorphic theme matching the Hammer-OS
+aesthetic. The time updates every second with smooth colon pulse animation,
+date display, and touch-toggle between 12-hour and 24-hour formats.
 
 ## Requirements
 
 - A display device declared as `display_lcd` in board hardware info.
-
-If the display is missing, the script prints an error and exits.
+- LCD touch input for format toggle.
 
 ## Tool Call Inputs
 
@@ -52,11 +53,18 @@ If the display is missing, the script prints an error and exits.
 }
 ```
 
-The script takes no arguments; pass an empty `args` object.
+Pass an empty `args` object for defaults. The clock starts immediately in
+24-hour format with live time display.
 
 ## Behavior
 
-The dial renders at roughly 10 frames per second and keeps running for the
-script's configured run time. On startup failure the script prints a single
-`[clock_dial_demo] ERROR: ...` line which should be reported directly to the
-user.
+- **Display**: Large digital time (HH:MM:SS) centered on 720×1280 portrait display.
+- **Format Toggle**: Tap the time area to switch between 12h and 24h format.
+- **Date**: Shows current date (YYYY-MM-DD) below the time.
+- **Colon Animation**: Colon pulses on/off every second for a breathing effect.
+- **Glassmorphic Design**: Dark card container with rounded corners and neon accents.
+- The script runs in an infinite polling loop; stop via runtime or page switch.
+
+## Files
+
+- `scripts/clock_dial_demo.lua`

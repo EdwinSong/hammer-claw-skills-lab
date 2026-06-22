@@ -1,65 +1,13 @@
 {
-  "generated_at": "2026-06-17T05:50:59Z",
+  "generated_at": "2026-06-22T02:11:23Z",
   "repo": "HammerMiner/hammer-claw-skills-lab",
-  "total": 10,
+  "total": 3,
   "skills": [
-    {
-      "id": "bilibili_up_fans",
-      "title": "Bilibili UP Fans",
-      "description": "Fetch the current Bilibili UP creator fan count through lua_module_call_capability. Defaults to 乐鑫信息科技.",
-      "author": "ESP-Claw contributor",
-      "category": "network",
-      "categories": [
-        "network"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/bilibili_up_fans/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [],
-      "cap_groups": [
-        "cap_lua",
-        "cap_web_search"
-      ],
-      "total_size": 7689,
-      "sha256": "b3438cfb13c3254f9c311724a65074484cc756d22d4e16906fb26d8a9edc44e9",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/bilibili_up_fans.lua"
-      ]
-    },
-    {
-      "id": "china_a_share_quote",
-      "title": "China A-Share Quote",
-      "description": "Fetch China A-share stock quote information through lua_module_call_capability and https://qt.gtimg.cn. Defaults to sh688018.",
-      "author": "ESP-Claw contributor",
-      "category": "network",
-      "categories": [
-        "network"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/china_a_share_quote/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [],
-      "cap_groups": [
-        "cap_lua",
-        "cap_web_search"
-      ],
-      "total_size": 7538,
-      "sha256": "c776e8520e070c3c44b7b477014aa95082f6955e0923e60023b868501c3a02fa",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/china_a_share_quote.lua"
-      ]
-    },
     {
       "id": "clock_dial_demo",
       "title": "Clock Dial Demo",
-      "description": "An animated analog clock dial rendered on the on-board LCD, with hour/minute/second hands and a dark themed face.",
-      "author": "ESP-Claw contributor",
+      "description": "Premium animated digital clock on the board LCD with dark-themed glassmorphic UI, date display, touch toggle between 12h/24h mode, and smooth second-pulse animation.",
+      "author": "HammerMiner",
       "category": "utility",
       "categories": [
         "utility",
@@ -75,8 +23,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 8150,
-      "sha256": "48ae595da74e0cbf5623b3ce158bf584f4d547f490efc477a190f482188d46e9",
+      "total_size": 6306,
+      "sha256": "0207c0ecc71b095b53168f6472a6160518b294c04fb0bcc97c7d9aeb3f79a88a",
       "files": [
         "SKILL.md",
         "preview.png",
@@ -84,120 +32,10 @@
       ]
     },
     {
-      "id": "codex_usage_dashboard",
-      "title": "Codex Usage Dashboard",
-      "description": "Show a Codex usage quota dashboard on the board display from a configured JSON endpoint, including 5-hour and weekly reset status.",
-      "author": "",
-      "category": "utility",
-      "categories": [
-        "utility",
-        "ui"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/codex_usage_dashboard/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [
-        "display"
-      ],
-      "cap_groups": [
-        "cap_lua",
-        "cap_http_request",
-        "cap_time"
-      ],
-      "total_size": 18522,
-      "sha256": "af28079e542d620b7270c31d7ed74602c2f8a1ee46def84103c6eb0e4c4727c8",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/codex_usage_dashboard.lua"
-      ]
-    },
-    {
-      "id": "current_ip_info",
-      "title": "Current IP Info",
-      "description": "Fetch the current public IP geolocation information through lua_module_call_capability and https://ipinfo.io/json.",
-      "author": "ESP-Claw contributor",
-      "category": "network",
-      "categories": [
-        "network"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/current_ip_info/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [],
-      "cap_groups": [
-        "cap_lua",
-        "cap_web_search"
-      ],
-      "total_size": 6510,
-      "sha256": "87b0424a7d1c0ed9dde1c9c8e5413e44e5d7329cec9fe3acda46902bf353af2e",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/current_ip_info.lua"
-      ]
-    },
-    {
-      "id": "current_weather",
-      "title": "Current Weather",
-      "description": "Fetch current weather through lua_module_call_capability and https://api.open-meteo.com. Defaults to Singapore.",
-      "author": "ESP-Claw contributor",
-      "category": "utility",
-      "categories": [
-        "utility"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/current_weather/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [],
-      "cap_groups": [
-        "cap_lua",
-        "cap_web_search"
-      ],
-      "total_size": 10622,
-      "sha256": "a0c6515a0cfdd257281e8e5dee2cbf95b57b263a949513922022e0b39c397ab2",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/current_weather.lua"
-      ]
-    },
-    {
-      "id": "dino",
-      "title": "Dino",
-      "description": "Run a Chrome offline-style Dino jumping runner on the board LCD. Use when the user asks for Dino, dinosaur game, runner game, jump game, LCD touch game, or GPIO button game.",
-      "author": "ESP-Claw contributor",
-      "category": "game",
-      "categories": [
-        "game",
-        "ui"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/dino/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [
-        "display"
-      ],
-      "cap_groups": [
-        "cap_lua"
-      ],
-      "total_size": 10354,
-      "sha256": "b68229e5f404ec54171ffe8601d4bead659874b2bd564b7563563d260965bc80",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/dino.lua"
-      ]
-    },
-    {
       "id": "flappybird",
       "title": "Flappy Bird",
-      "description": "Run a Flappy Bird mini-game on the board LCD. Prefer LCD touch; otherwise use a GPIO button. Optional audio on audio_dac.",
-      "author": "ESP-Claw contributor",
+      "description": "Run a Flappy Bird mini-game on the board LCD with touch-driven flap control, pipe obstacle generation, score tracking, and game-over restart flow.",
+      "author": "HammerMiner",
       "category": "game",
       "categories": [
         "game",
@@ -213,8 +51,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 11329,
-      "sha256": "9fee627e55e49f3068c59cf4d861e81b1b521e83faaea2eeed5a6d2569a5c276",
+      "total_size": 10789,
+      "sha256": "f5272716ebaf746415df3e4651c7868c19b8ede63baa3e474bdb73a8efe44940",
       "files": [
         "SKILL.md",
         "preview.png",
@@ -247,32 +85,6 @@
         "SKILL.md",
         "preview.png",
         "scripts/game_minesweeper.lua"
-      ]
-    },
-    {
-      "id": "github_repo_star",
-      "title": "GitHub Repository Star",
-      "description": "Fetch the current GitHub star count for a repository through lua_module_call_capability. Defaults to https://github.com/espressif/esp-claw.",
-      "author": "ESP-Claw contributor",
-      "category": "utility",
-      "categories": [
-        "utility"
-      ],
-      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/github_repo_star/preview.png",
-      "devices": [
-        "universal"
-      ],
-      "peripherals": [],
-      "cap_groups": [
-        "cap_lua",
-        "cap_web_search"
-      ],
-      "total_size": 8249,
-      "sha256": "1c4d4e61a70bb4b779fe200a9c610b8ca16a6d97dc0112e63423868445efbb3d",
-      "files": [
-        "SKILL.md",
-        "preview.png",
-        "scripts/github_repo_star.lua"
       ]
     }
   ]
