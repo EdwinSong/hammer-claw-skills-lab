@@ -1,11 +1,11 @@
 -- ================================================================
 -- clock_dial_demo.lua — PREMIUM DIGITAL CLOCK (Claw Display Version)
--- @page_id 3
+-- @page_id 7
 -- @name Clock-Dial-Demo
 -- @desc Premium animated digital clock with 12h/24h toggle
 -- ================================================================
 
-local PAGE = 3
+local PAGE = 7
 local SCR_W, SCR_H = 720, 1280
 
 -- Object IDs
