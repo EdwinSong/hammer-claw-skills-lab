@@ -158,8 +158,12 @@ end
 
 -- ── Instructions ──
 local function draw_instructions()
-    local guide_y = GRID_Y + ROWS * (CELL + GAP) + 20
-    claw.display.label(PAGE, 600, 50, guide_y, "Tap cell: reveal   |   Flag Mode: mark mine   |   New Game: restart", 0x888888, 18)
+    local guide_y = GRID_Y + ROWS * (CELL + GAP) + 110
+    claw.display.label(PAGE, 600, 55, guide_y, "Tap cell: reveal", 0x888888, 18)
+    claw.display.label(PAGE, 601, 260, guide_y, "|", 0x555555, 18)
+    claw.display.label(PAGE, 602, 280, guide_y, "Flag Mode: mark mine", 0x888888, 18)
+    claw.display.label(PAGE, 603, 500, guide_y, "|", 0x555555, 18)
+    claw.display.label(PAGE, 604, 520, guide_y, "New Game: restart", 0x888888, 18)
 end
 
 -- ── Victory Screen ──
