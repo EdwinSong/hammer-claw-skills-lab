@@ -115,7 +115,7 @@ local function draw_cell(r, c)
     else
         if grid[r][c] == -1 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0xFF3B30)
-            claw.display.image(PAGE, b_id + 1000, x + 40, y + 40, 40, 40, "F:/ui/bomb.png")
+            claw.display.image(PAGE, b_id + 1000, x + 40, y + 40, 40, 40, "builtin:bomb")
         elseif grid[r][c] == 0 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0x101124)
             claw.display.label(PAGE, l_id, x + 51, y + 44, "", 0, 35)
