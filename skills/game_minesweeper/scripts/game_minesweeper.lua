@@ -9,7 +9,7 @@ local PAGE = 5
 local ROWS, COLS = 5, 5
 local CELL, GAP = 120, 6
 local GRID_X, GRID_Y = 48, 240
-local BOMB_IMG = "/fatfs/skills/game_minesweeper/scripts/bomb.png"
+local BOMB_IMG = "F:skills/game_minesweeper/scripts/bomb.png"
 
 -- Level persistence
 local LEVEL_FILE = storage.join_path(storage.get_root_dir(), "skills", "game_minesweeper", "level.txt")
