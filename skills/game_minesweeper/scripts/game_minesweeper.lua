@@ -9,6 +9,7 @@ local PAGE = 5
 local ROWS, COLS = 5, 5
 local CELL, GAP = 120, 6
 local GRID_X, GRID_Y = 48, 240
+local BOMB_IMG = "/fatfs/skills/game_minesweeper/scripts/bomb.png"
 
 -- Level persistence
 local LEVEL_FILE = storage.join_path(storage.get_root_dir(), "skills", "game_minesweeper", "level.txt")
@@ -115,7 +116,8 @@ local function draw_cell(r, c)
     else
         if grid[r][c] == -1 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0xFF3B30)
-            claw.display.image(PAGE, b_id + 1000, x + 40, y + 40, 40, 40, "builtin:bomb")
+            claw.display.label(PAGE, l_id, 0, 0, "", 0, 35)
+            claw.display.image(PAGE, b_id + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
         elseif grid[r][c] == 0 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0x101124)
             claw.display.label(PAGE, l_id, x + 51, y + 44, "", 0, 35)
@@ -216,8 +218,11 @@ local function trigger_explosion(click_r, click_c)
     game_over = true
     
     local det_x, det_y = cell_xy(click_r, click_c)
-    claw.display.button(PAGE, cell_id(click_r, click_c), det_x, det_y, CELL, CELL, "", 0xFF3B30)
-    claw.display.label(PAGE, label_id(click_r, click_c), det_x + 51, det_y + 44, "@", 0xFFFFFF, 35)
+    local b_id = cell_id(click_r, click_c)
+    local l_id = label_id(click_r, click_c)
+    claw.display.button(PAGE, b_id, det_x, det_y, CELL, CELL, "", 0xFF3B30)
+    claw.display.label(PAGE, l_id, 0, 0, "", 0, 35)
+    claw.display.image(PAGE, b_id + 1000, det_x + 40, det_y + 40, 40, 40, BOMB_IMG)
 
     for dist = 1, (ROWS + COLS) do
         for r = 0, ROWS - 1 do
@@ -226,8 +231,11 @@ local function trigger_explosion(click_r, click_c)
                 if d == dist then
                     local x, y = cell_xy(r, c)
                     if grid[r][c] == -1 then
-                        claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0xFF5E55)
-                        claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "@", 0xFFFFFF, 35)
+                        local b_id_node = cell_id(r, c)
+                        local l_id_node = label_id(r, c)
+                        claw.display.button(PAGE, b_id_node, x, y, CELL, CELL, "", 0xFF5E55)
+                        claw.display.label(PAGE, l_id_node, 0, 0, "", 0, 35)
+                        claw.display.image(PAGE, b_id_node + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
                     else
                         if not revealed[r][c] then
                             claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0x883311)
@@ -252,8 +260,11 @@ local function trigger_explosion(click_r, click_c)
         for c = 0, COLS - 1 do
             if grid[r][c] == -1 and not (r == click_r and c == click_c) then
                 local x, y = cell_xy(r, c)
-                claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0x552222)
-                claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "@", 0xFFB700, 35)
+                local b_id_node = cell_id(r, c)
+                local l_id_node = label_id(r, c)
+                claw.display.button(PAGE, b_id_node, x, y, CELL, CELL, "", 0x552222)
+                claw.display.label(PAGE, l_id_node, 0, 0, "", 0, 35)
+                claw.display.image(PAGE, b_id_node + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
             end
         end
     end
@@ -270,8 +281,11 @@ local function trigger_win_animation()
             for c = 0, COLS - 1 do
                 if grid[r][c] == -1 then
                     local x, y = cell_xy(r, c)
-                    claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", step % 2 == 1 and 0x34C759 or 0x1A3A2A)
-                    claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "@", 0xFFFFFF, 35)
+                    local b_id_node = cell_id(r, c)
+                    local l_id_node = label_id(r, c)
+                    claw.display.button(PAGE, b_id_node, x, y, CELL, CELL, "", step % 2 == 1 and 0x34C759 or 0x1A3A2A)
+                    claw.display.label(PAGE, l_id_node, 0, 0, "", 0, 35)
+                    claw.display.image(PAGE, b_id_node + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
                 end
             end
         end
