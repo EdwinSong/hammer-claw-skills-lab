@@ -106,17 +106,16 @@ local function draw_cell(r, c)
     local l_id = label_id(r, c)
 
     if not revealed[r][c] then
-        local txt = flagged[r][c] and "@" or "?"
+        local txt = flagged[r][c] and "!" or "?"
         local bg_clr = flagged[r][c] and 0x242745 or 0x1A1C38
-        local txt_clr = flagged[r][c] and 0x34C759 or 0x5D619E
+        local txt_clr = flagged[r][c] and 0xFFB700 or 0x5D619E
         
         claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", bg_clr)
         claw.display.label(PAGE, l_id, x + 51, y + 44, txt, txt_clr, 35)
     else
-        -- Revealed
         if grid[r][c] == -1 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0xFF3B30)
-            claw.display.label(PAGE, l_id, x + 51, y + 44, "@", 0xFFFFFF, 35)
+            claw.display.image(PAGE, b_id + 1000, x + 40, y + 40, 40, 40, "F:/ui/bomb.png")
         elseif grid[r][c] == 0 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0x101124)
             claw.display.label(PAGE, l_id, x + 51, y + 44, "", 0, 35)
@@ -128,7 +127,6 @@ local function draw_cell(r, c)
         end
     end
 end
-
 -- ── Render Board Grid ──
 local function draw_grid()
     for r = 0, ROWS - 1 do
