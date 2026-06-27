@@ -106,7 +106,7 @@ local function draw_cell(r, c)
     local l_id = label_id(r, c)
 
     if not revealed[r][c] then
-        local txt = flagged[r][c] and "\u{1F4A3}" or "?"
+        local txt = flagged[r][c] and "@" or "?"
         local bg_clr = flagged[r][c] and 0x242745 or 0x1A1C38
         local txt_clr = flagged[r][c] and 0x34C759 or 0x5D619E
         
@@ -116,7 +116,7 @@ local function draw_cell(r, c)
         -- Revealed
         if grid[r][c] == -1 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0xFF3B30)
-            claw.display.label(PAGE, l_id, x + 51, y + 44, "\u{1F4A3}", 0xFFFFFF, 35)
+            claw.display.label(PAGE, l_id, x + 51, y + 44, "@", 0xFFFFFF, 35)
         elseif grid[r][c] == 0 then
             claw.display.button(PAGE, b_id, x, y, CELL, CELL, "", 0x101124)
             claw.display.label(PAGE, l_id, x + 51, y + 44, "", 0, 35)
@@ -219,7 +219,7 @@ local function trigger_explosion(click_r, click_c)
     
     local det_x, det_y = cell_xy(click_r, click_c)
     claw.display.button(PAGE, cell_id(click_r, click_c), det_x, det_y, CELL, CELL, "", 0xFF3B30)
-    claw.display.label(PAGE, label_id(click_r, click_c), det_x + 51, det_y + 44, "\u{1F4A3}", 0xFFFFFF, 35)
+    claw.display.label(PAGE, label_id(click_r, click_c), det_x + 51, det_y + 44, "@", 0xFFFFFF, 35)
 
     for dist = 1, (ROWS + COLS) do
         for r = 0, ROWS - 1 do
@@ -229,7 +229,7 @@ local function trigger_explosion(click_r, click_c)
                     local x, y = cell_xy(r, c)
                     if grid[r][c] == -1 then
                         claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0xFF5E55)
-                        claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "💣", 0xFFFFFF, 35)
+                        claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "@", 0xFFFFFF, 35)
                     else
                         if not revealed[r][c] then
                             claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0x883311)
@@ -255,7 +255,7 @@ local function trigger_explosion(click_r, click_c)
             if grid[r][c] == -1 and not (r == click_r and c == click_c) then
                 local x, y = cell_xy(r, c)
                 claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0x552222)
-                claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "💣", 0xFFB700, 35)
+                claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "@", 0xFFB700, 35)
             end
         end
     end
@@ -273,7 +273,7 @@ local function trigger_win_animation()
                 if grid[r][c] == -1 then
                     local x, y = cell_xy(r, c)
                     claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", step % 2 == 1 and 0x34C759 or 0x1A3A2A)
-                    claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "💣", 0xFFFFFF, 35)
+                    claw.display.label(PAGE, label_id(r, c), x + 51, y + 44, "@", 0xFFFFFF, 35)
                 end
             end
         end
