@@ -157,6 +157,7 @@ local function update_status()
 end
 
 -- ── Instructions ──
+local VERSION = "v1.2"
 local function draw_instructions()
     local guide_y = GRID_Y + ROWS * (CELL + GAP) + 110
     claw.display.label(PAGE, 600, 55, guide_y, "Tap cell: reveal", 0x888888, 18)
@@ -164,6 +165,7 @@ local function draw_instructions()
     claw.display.label(PAGE, 602, 280, guide_y, "Flag Mode: mark mine", 0x888888, 18)
     claw.display.label(PAGE, 603, 500, guide_y, "|", 0x555555, 18)
     claw.display.label(PAGE, 604, 520, guide_y, "New Game: restart", 0x888888, 18)
+    claw.display.label(PAGE, 605, 48, guide_y + 30, VERSION, 0x333366, 18)
 end
 
 -- ── Victory Screen ──
@@ -222,7 +224,7 @@ local function trigger_explosion(click_r, click_c)
     local l_id = label_id(click_r, click_c)
     claw.display.button(PAGE, b_id, det_x, det_y, CELL, CELL, "", 0xFF3B30)
     claw.display.label(PAGE, l_id, 0, 0, "", 0, 35)
-    claw.display.image(PAGE, b_id + 1000, det_x + 40, det_y + 40, 40, 40, BOMB_IMG)
+    claw.display.image(PAGE, b_id + 1000, det_x, det_y, CELL, CELL, BOMB_IMG)
 
     for dist = 1, (ROWS + COLS) do
         for r = 0, ROWS - 1 do
@@ -235,7 +237,7 @@ local function trigger_explosion(click_r, click_c)
                         local l_id_node = label_id(r, c)
                         claw.display.button(PAGE, b_id_node, x, y, CELL, CELL, "", 0xFF5E55)
                         claw.display.label(PAGE, l_id_node, 0, 0, "", 0, 35)
-                        claw.display.image(PAGE, b_id_node + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
+                        claw.display.image(PAGE, b_id_node + 1000, x, y, CELL, CELL, BOMB_IMG)
                     else
                         if not revealed[r][c] then
                             claw.display.button(PAGE, cell_id(r, c), x, y, CELL, CELL, "", 0x883311)
@@ -264,7 +266,7 @@ local function trigger_explosion(click_r, click_c)
                 local l_id_node = label_id(r, c)
                 claw.display.button(PAGE, b_id_node, x, y, CELL, CELL, "", 0x552222)
                 claw.display.label(PAGE, l_id_node, 0, 0, "", 0, 35)
-                claw.display.image(PAGE, b_id_node + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
+                claw.display.image(PAGE, b_id_node + 1000, x, y, CELL, CELL, BOMB_IMG)
             end
         end
     end
@@ -285,7 +287,7 @@ local function trigger_win_animation()
                     local l_id_node = label_id(r, c)
                     claw.display.button(PAGE, b_id_node, x, y, CELL, CELL, "", step % 2 == 1 and 0x34C759 or 0x1A3A2A)
                     claw.display.label(PAGE, l_id_node, 0, 0, "", 0, 35)
-                    claw.display.image(PAGE, b_id_node + 1000, x + 40, y + 40, 40, 40, BOMB_IMG)
+                    claw.display.image(PAGE, b_id_node + 1000, x, y, CELL, CELL, BOMB_IMG)
                 end
             end
         end
@@ -335,6 +337,8 @@ local function new_game()
     
     -- Dashboard container
     claw.display.container(PAGE, 100, 48, 120, 624, 80, 0x16182E, 12)
+    -- Title inside dashboard (not sent to top bar)
+    claw.display.label(PAGE, 110, 198, 138, "💣 MINESWEEPER", 0xFFFFFF, 24)
     draw_grid()
     draw_instructions()
 
