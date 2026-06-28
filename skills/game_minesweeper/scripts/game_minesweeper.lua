@@ -157,7 +157,7 @@ local function update_status()
 end
 
 -- ── Instructions ──
-local VERSION = "v1.2"
+local VERSION = "v1.3"
 local function draw_instructions()
     local guide_y = GRID_Y + ROWS * (CELL + GAP) + 110
     claw.display.label(PAGE, 600, 55, guide_y, "Tap cell: reveal", 0x888888, 18)
@@ -338,7 +338,7 @@ local function new_game()
     -- Dashboard container
     claw.display.container(PAGE, 100, 48, 120, 624, 80, 0x16182E, 12)
     -- Title inside dashboard (not sent to top bar)
-    claw.display.label(PAGE, 110, 198, 138, "💣 MINESWEEPER", 0xFFFFFF, 24)
+    claw.display.label(PAGE, 110, 198, 126, "💣 MINESWEEPER", 0xFFFFFF, 24)
     draw_grid()
     draw_instructions()
 
