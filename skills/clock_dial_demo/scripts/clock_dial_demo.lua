@@ -64,8 +64,8 @@ local function draw_shell()
     -- 1. Full-screen dark green background card
     claw.display.container(PAGE, ID_BG, 0, 0, SCR_W, SCR_H, 0x162520, 0)
 
-    -- 2. Dial Image (600x600 centered at X=60, Y=325)
-    claw.display.image(PAGE, ID_DIAL, 60, 325, 600, 600, "/fatfs/skills/clock_dial_demo/scripts/dial.png")
+    -- 2. Dial Image (450x450 centered at X=135, Y=400)
+    claw.display.image(PAGE, ID_DIAL, 135, 400, 450, 450, "/fatfs/skills/clock_dial_demo/scripts/dial.png")
 
     -- 3. Center cap (brass color, 24x24 centered at X=348, Y=613)
     claw.display.button(PAGE, ID_CENTER_CAP, 348, 613, 24, 24, "", 0xA17A4A)
