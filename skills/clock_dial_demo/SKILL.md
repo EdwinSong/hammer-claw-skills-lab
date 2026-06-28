@@ -32,17 +32,16 @@
 # Clock Dial Demo
 
 Use this skill when the user asks for a clock, watch face, time display,
-dial, or a premium LCD demo on the board.
+dial, or a premium vintage analog watch face on the board LCD.
 
-The Lua script renders an animated digital clock on the LCD using the
-claw.display API, with a dark glassmorphic theme matching the Hammer-OS
-aesthetic. The time updates every second with smooth colon pulse animation,
-date display, and touch-toggle between 12-hour and 24-hour formats.
+The Lua script renders a beautiful vintage mechanical bronze clock dial on the LCD
+using the claw.display API. It features Roman numerals, ornate engraving,
+a dark green background matching the premium aesthetics, and dynamically rendered
+tapered hour and minute hands.
 
 ## Requirements
 
 - A display device declared as `display_lcd` in board hardware info.
-- LCD touch input for format toggle.
 
 ## Tool Call Inputs
 
@@ -53,18 +52,16 @@ date display, and touch-toggle between 12-hour and 24-hour formats.
 }
 ```
 
-Pass an empty `args` object for defaults. The clock starts immediately in
-24-hour format with live time display.
+Pass an empty `args` object for defaults. The clock starts immediately with live time display.
 
 ## Behavior
 
-- **Display**: Large digital time (HH:MM:SS) centered on 720×1280 portrait display.
-- **Format Toggle**: Tap the time area to switch between 12h and 24h format.
-- **Date**: Shows current date (YYYY-MM-DD) below the time.
-- **Colon Animation**: Colon pulses on/off every second for a breathing effect.
-- **Glassmorphic Design**: Dark card container with rounded corners and neon accents.
+- **Display**: Ornate mechanical watch face (600×600) centered on a 720×1280 portrait layout.
+- **Hands**: Tapered metallic blue hour and minute hands update dynamically every minute.
+- **Status Bar**: The top system status bar remains visible for connectivity and device status.
 - The script runs in an infinite polling loop; stop via runtime or page switch.
 
 ## Files
 
 - `scripts/clock_dial_demo.lua`
+- `scripts/dial.png`

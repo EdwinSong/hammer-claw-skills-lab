@@ -1,130 +1,94 @@
 -- ================================================================
--- clock_dial_demo.lua — PREMIUM DIGITAL CLOCK (Claw Display Version)
+-- clock_dial_demo.lua — PREMIUM VINTAGE MECHANICAL CLOCK DIAL
 -- @page_id 7
 -- @name Clock-Dial-Demo
--- @desc Premium animated digital clock with 12h/24h toggle
+-- @desc Premium animated mechanical Roman clock dial
 -- ================================================================
 
 local PAGE = 7
 local SCR_W, SCR_H = 720, 1280
 
+-- Center of the clock dial
+local CENTER_X = 360
+local CENTER_Y = 625
+
 -- Object IDs
-local ID_TITLE      = 301
-local ID_CONTAINER  = 302
-local ID_TIME       = 303
-local ID_DATE       = 304
-local ID_FORMAT     = 305
-local ID_SEC_RING   = 310  -- base for 60 second-dot IDs (310–369)
+local ID_BG         = 301
+local ID_DIAL       = 302
+local ID_CENTER_CAP = 303
 
--- State
-local use_24h = true
-local last_second = -1
-
--- Ring geometry (absolute page coords)
-local RING_CX, RING_CY = 360, 360
-local RING_R = 160
-local DOT_SIZE = 6
-local DOT_COLOR_OFF = 0x1A1C38
-local DOT_COLOR_ON  = 0x00E5FF
+-- Keep track of last state to minimize updates
+local last_min = -1
+local last_hour = -1
 
 -- ── Helpers ──
 local function get_time()
     local ts = os.time()
     local t = os.date("*t", ts)
-    return t.hour, t.min, t.sec, t.year, t.month, t.day
+    return t.hour, t.min
 end
 
-local function fmt_time(h, m, s)
-    if use_24h then
-        return string.format("%02d:%02d:%02d", h, m, s)
-    else
-        local h12 = h % 12
-        if h12 == 0 then h12 = 12 end
-        local ampm = (h >= 12) and "PM" or "AM"
-        return string.format("%02d:%02d:%02d %s", h12, m, s, ampm)
+-- ── Update hands positions ──
+local function update_hands(hours, minutes)
+    -- Hour hand angle (30 deg/hour + 0.5 deg/minute)
+    local h_angle = (hours % 12) * 30 + minutes * 0.5
+    local h_rad = math.rad(h_angle - 90)
+    
+    -- Minute hand angle (6 deg/minute)
+    local m_angle = minutes * 6
+    local m_rad = math.rad(m_angle - 90)
+    
+    -- Draw Hour Hand (14 dots, length 140, tapered size 14 -> 8)
+    for i = 1, 14 do
+        local dist = i * 10
+        local size = 14 - math.floor(i * 6 / 14)
+        local x = CENTER_X + math.floor(math.cos(h_rad) * dist + 0.5) - size // 2
+        local y = CENTER_Y + math.floor(math.sin(h_rad) * dist + 0.5) - size // 2
+        -- Color: Deep metallic blue/black (0x1F2A38)
+        claw.display.button(PAGE, 310 + i, x, y, size, size, "", 0x1F2A38)
     end
-end
-
-local function fmt_date(y, mon, d)
-    return string.format("%04d-%02d-%02d", y, mon, d)
-end
-
--- ── Dot position helper ──
-local function dot_xy(sec)
-    local rad = math.rad(sec * 6 - 90)
-    local x = RING_CX + math.floor(math.cos(rad) * RING_R + 0.5) - DOT_SIZE // 2
-    local y = RING_CY + math.floor(math.sin(rad) * RING_R + 0.5) - DOT_SIZE // 2
-    return x, y
-end
-
--- ── Draw a single second dot ──
-local function draw_dot(sec, color)
-    local x, y = dot_xy(sec)
-    claw.display.button(PAGE, ID_SEC_RING + sec, x, y, DOT_SIZE, DOT_SIZE, "", color)
-end
-
--- ── Update a dot: turn old off, new on ──
-local function update_dot(old_sec, new_sec)
-    if old_sec == new_sec then return end
-    if old_sec >= 0 and old_sec < 60 then
-        draw_dot(old_sec, DOT_COLOR_OFF)
-    end
-    if new_sec >= 0 and new_sec < 60 then
-        draw_dot(new_sec, DOT_COLOR_ON)
+    
+    -- Draw Minute Hand (25 dots, length 200, tapered size 10 -> 6)
+    for i = 1, 25 do
+        local dist = i * 8
+        local size = 10 - math.floor(i * 4 / 25)
+        local x = CENTER_X + math.floor(math.cos(m_rad) * dist + 0.5) - size // 2
+        local y = CENTER_Y + math.floor(math.sin(m_rad) * dist + 0.5) - size // 2
+        -- Color: Classic metallic steel blue (0x2C4B5E)
+        claw.display.button(PAGE, 330 + i, x, y, size, size, "", 0x2C4B5E)
     end
 end
 
 -- ── Draw static shell ──
 local function draw_shell()
-    -- Title
-    claw.display.label(PAGE, ID_TITLE, 48, 70, "CLOCK DIAL", 0x00E5FF, 24)
+    -- 1. Full-screen dark green background card
+    claw.display.container(PAGE, ID_BG, 0, 0, SCR_W, SCR_H, 0x162520, 0)
 
-    -- Glassmorphic container (touch target for format toggle)
-    claw.display.container(PAGE, ID_CONTAINER, 48, 120, 624, 480, 0x16182E, 20)
+    -- 2. Dial Image (600x600 centered at X=60, Y=325)
+    claw.display.image(PAGE, ID_DIAL, 60, 325, 600, 600, "/fatfs/skills/clock_dial_demo/scripts/dial.png")
 
-    -- All ring dots (initially dark)
-    for i = 0, 59 do
-        draw_dot(i, DOT_COLOR_OFF)
-    end
-end
-
--- ── Update time display (1 fps) ──
-local function update_display()
-    local h, m, s, y, mon, d = get_time()
-
-    if s == last_second then return end
-
-    -- Update second dot
-    update_dot(last_second, s)
-    last_second = s
-
-    -- Time string
-    local time_str = fmt_time(h, m, s)
-    local tx = use_24h and 150 or 120
-    claw.display.label(PAGE, ID_TIME, tx, 205, time_str, 0xFFFFFF, 58)
-
-    -- Date
-    claw.display.label(PAGE, ID_DATE, 240, 290, fmt_date(y, mon, d), 0x8899AA, 24)
-
-    -- Format badge
-    claw.display.label(PAGE, ID_FORMAT, 332, 350, use_24h and "24H" or "12H", 0x30D158, 20)
+    -- 3. Center cap (brass color, 24x24 centered at X=348, Y=613)
+    claw.display.button(PAGE, ID_CENTER_CAP, 348, 613, 24, 24, "", 0xA17A4A)
 end
 
 -- ════════════════════════════════════════════════════
 -- MAIN ENTRY
 -- ════════════════════════════════════════════════════
-claw.display.create_page(PAGE, "CLOCK DIAL")
+-- Create page with empty title to keep top bar clean and hide default title label
+claw.display.create_page(PAGE, "")
 draw_shell()
 
 -- Main Polling Loop
 while true do
-    local pid, oid = claw.display.pop_event()
+    -- Pop events to keep queue clean (we have no buttons to handle)
+    claw.display.pop_event()
 
-    if pid == PAGE and oid == ID_CONTAINER then
-        use_24h = not use_24h
-        last_second = -1  -- force full redraw
+    local h, m = get_time()
+    if h ~= last_hour or m ~= last_min then
+        update_hands(h, m)
+        last_hour = h
+        last_min = m
     end
 
-    update_display()
-    delay.delay_ms(200)
+    delay.delay_ms(1000)
 end
