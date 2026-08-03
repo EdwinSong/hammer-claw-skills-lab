@@ -116,14 +116,41 @@ Use this skill when the user asks to do the specific thing.
 
 ## How to Contribute
 
-### 1. Fork & Clone
+### 1. Fork the Repository
+
+Go to [github.com/HammerMiner/hammer-claw-skills-lab](https://github.com/HammerMiner/hammer-claw-skills-lab) and click the **Fork** button in the top-right corner. This creates your own copy under your GitHub account, e.g. `https://github.com/YOUR_USERNAME/hammer-claw-skills-lab`.
+
+### 2. Clone Your Fork
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/hammer-claw-skills-lab.git
 cd hammer-claw-skills-lab
 ```
 
-### 2. Create Your Skill
+### 3. Add the Upstream Remote
+
+Add the original repository as `upstream` so you can sync the latest changes later:
+
+```bash
+git remote add upstream https://github.com/HammerMiner/hammer-claw-skills-lab.git
+```
+
+Verify your remotes:
+
+```bash
+git remote -v
+```
+
+You should see:
+
+```
+origin    https://github.com/YOUR_USERNAME/hammer-claw-skills-lab.git (fetch)
+origin    https://github.com/YOUR_USERNAME/hammer-claw-skills-lab.git (push)
+upstream  https://github.com/HammerMiner/hammer-claw-skills-lab.git (fetch)
+upstream  https://github.com/HammerMiner/hammer-claw-skills-lab.git (push)
+```
+
+### 4. Create Your Skill
 
 ```bash
 mkdir -p skills/my_skill/scripts
@@ -131,7 +158,7 @@ mkdir -p skills/my_skill/scripts
 
 Write `skills/my_skill/SKILL.md` following the format above. Add any Lua scripts to `scripts/`.
 
-### 3. Validate
+### 5. Validate
 
 ```bash
 pnpm install
@@ -140,11 +167,49 @@ pnpm validate-skills
 
 This checks that all `SKILL.md` files have correct frontmatter, valid categories, matching directory names, and proper formatting.
 
-### 4. Submit a Pull Request
+### 6. Create a Branch and Commit
 
-Push your branch and open a PR against `main`. A maintainer will review your submission. Once merged, your skill becomes available to all devices.
+```bash
+git checkout -b add-my-skill
+git add skills/my_skill/
+git commit -m "Add my_skill skill"
+```
 
-### 5. Custom Page Sharing
+### 7. Push to Your Fork
+
+```bash
+git push origin add-my-skill
+```
+
+### 8. Submit a Pull Request
+
+Open your fork on GitHub:
+
+```
+https://github.com/YOUR_USERNAME/hammer-claw-skills-lab
+```
+
+GitHub will show a **"Compare & pull request"** banner. Click it and make sure the PR targets:
+
+- **base repository**: `HammerMiner/hammer-claw-skills-lab`
+- **base branch**: `main`
+- **head repository**: `YOUR_USERNAME/hammer-claw-skills-lab`
+- **compare branch**: `add-my-skill`
+
+Add a clear title and description, then submit. A maintainer will review your submission. Once merged, your skill becomes available to all devices.
+
+### 9. Sync Your Fork Later
+
+Before starting your next contribution, sync your fork with the latest upstream changes:
+
+```bash
+git fetch upstream
+git checkout main
+git merge upstream/main
+git push origin main
+```
+
+### 10. Custom Page Sharing
 
 Have a custom Lua page you built for your device? You can share it:
 
