@@ -243,7 +243,7 @@ https://github.com/YOUR_USERNAME/hammer-claw-skills-lab
 GitHub will show a **"Compare & pull request"** banner. Click it and make sure the PR targets:
 
 - **base repository**: `HammerMiner/hammer-claw-skills-lab`
-- **base branch**: `main`
+- **base branch**: `test`
 - **head repository**: `YOUR_USERNAME/hammer-claw-skills-lab`
 - **compare branch**: `add-my-skill`
 
@@ -255,9 +255,9 @@ Before starting your next contribution, sync your fork with the latest upstream 
 
 ```bash
 git fetch upstream
-git checkout main
-git merge upstream/main
-git push origin main
+git checkout test
+git merge upstream/test
+git push origin test
 ```
 
 ### 11. Custom Page Sharing

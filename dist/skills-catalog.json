@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-08-04T09:37:13Z",
+  "repo": "HammerMiner/hammer-claw-skills-lab",
+  "total": 2,
+  "skills": [
+    {
+      "id": "game_minesweeper",
+      "title": "Game MineSweeper",
+      "description": "Run a premium animated Minesweeper game on the board LCD with 5x5 grid, multiple levels (1-5), flag mode, explosion ripple animation, and victory celebration screen. Touch-driven with dark-themed LVGL UI.",
+      "author": "HammerMiner",
+      "category": "game",
+      "categories": [
+        "game",
+        "ui"
+      ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/game_minesweeper/preview.png",
+      "devices": [
+        "universal"
+      ],
+      "peripherals": [
+        "display"
+      ],
+      "cap_groups": [
+        "cap_lua"
+      ],
+      "total_size": 20906,
+      "sha256": "7b3b675acf0fa9a7632a241fe084601e95f1349d5434784243074d0e23f71256",
+      "files": [
+        "SKILL.md",
+        "preview.png",
+        "scripts\\bomb.png",
+        "scripts\\game_minesweeper.lua"
+      ]
+    },
+    {
+      "id": "miner_dashboard",
+      "title": "Bitcoin Miner Dashboard",
+      "description": "Display a clean, card-based Bitcoin miner dashboard with hashrate, temperature, BTC price, network status, mining config, ASIC config, and system info on the board LCD.",
+      "author": "HammerMiner",
+      "category": "mining",
+      "categories": [
+        "mining",
+        "ui"
+      ],
+      "preview_url": "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main/skills/miner_dashboard/preview.png",
+      "devices": [
+        "bc08-p4"
+      ],
+      "peripherals": [
+        "display",
+        "asic"
+      ],
+      "cap_groups": [
+        "cap_lua"
+      ],
+      "total_size": 50473,
+      "sha256": "625340a037b668f0eef12ab84635e1e5d6b2cb8566c4855de4fd8e28255b8960",
+      "files": [
+        "SKILL.md",
+        "assets\\asic.png",
+        "assets\\btc.png",
+        "assets\\freq.png",
+        "assets\\gear.png",
+        "assets\\hashrate.png",
+        "assets\\network.png",
+        "assets\\pass.png",
+        "assets\\pool.png",
+        "assets\\status.png",
+        "assets\\temp.png",
+        "assets\\volt.png",
+        "assets\\wifi.png",
+        "assets\\worker.png",
+        "preview.png",
+        "scripts\\miner_dashboard.lua"
+      ]
+    }
+  ]
+}
