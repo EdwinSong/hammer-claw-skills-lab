@@ -32,7 +32,7 @@
 # Game MineSweeper
 
 Use this skill when the user asks to play Minesweeper, mine sweeping game,
-扫雷, or a touch-based puzzle game on the board LCD.
+or a touch-based puzzle game on the board LCD.
 
 The Lua script renders a 5×5 dark-themed grid with premium neon-colored number
 cells, flag/flag mode toggle, explosion ripple animation on detonation, and
