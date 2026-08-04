@@ -7,7 +7,7 @@
 
 ## What Is This?
 
-Hammer Claw Skills Lab is a community-driven repository of **Skills** — LLM-invokable packages that extend what your device can do. Each skill bundles a `SKILL.md` instruction file with optional Lua scripts, assets, and references. The device's built-in AI agent reads these skills and can execute them on demand.
+Hammer Claw Skills Lab is a community-driven repository of **Skills** — LUA scripte based UI framework, which could leverage AI to help you built custom UI pages. Each skill bundles a `SKILL.md` instruction file with optional Lua scripts, assets, and references. The device's built-in AI agent reads these skills and can execute them on demand.
 
 This project is derived from [espressif/esp-claw-skills-lab](https://github.com/espressif/esp-claw-skills-lab) (MIT), adapted for the Hammer hardware ecosystem.
 
@@ -272,17 +272,6 @@ After review and merge, and necessary testing on backend,other users can install
 
 ---
 
-### Compatibility Check
-
-When installing a skill, the device should:
-
-1. Fetch `_metadata.json` from the skill directory
-2. Compare `metadata.devices` against the device model
-3. Compare `metadata.peripherals` against available hardware
-4. Warn the user if conflicts exist, allow force-install
-
----
-
 ## Project Structure
 
 ```
@@ -293,31 +282,6 @@ hammer-claw-skills-lab/
 ├── skills/                       # All shared skills
 │   └── game_minesweeper/         # Minesweeper game
 └── ...                           # Additional project files
-```
-
----
-
-## Local Development
-
-```bash
-# Requirements
-node >= 22.12.0
-pnpm >= 11.0
-
-# Install dependencies
-pnpm install
-
-# Start dev server
-pnpm dev
-
-# Validate all skills
-pnpm validate-skills
-
-# Production build
-pnpm build
-# → dist/            Static web frontend
-# → dist/raw/        Raw skill files (direct device downloads)
-# → src/generated/   skills-data.json + tags.json
 ```
 
 ---
