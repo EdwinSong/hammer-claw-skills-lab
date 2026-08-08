@@ -2,7 +2,9 @@
 -- miner_dashboard.lua — BITCOIN MINER DASHBOARD
 -- @page_id 9
 -- @name MinerDashboard
--- @desc Clean card-based Bitcoin miner dashboard for BC08-P4 LCD
+-- @desc Live Bitcoin miner dashboard for BC08-P4 LCD.
+--       Fetches BTC price & block height from public APIs and
+--       reads device hashrate from net.get_network_stats().
 -- ================================================================
 
 local PAGE = 9
@@ -45,10 +47,10 @@ local ICONS = {
     gear = ASSET_DIR .. "gear.png",
 }
 
--- Mock dashboard data
+-- Dashboard data. Defaults are shown for fields with no API source.
 local DATA = {
-    ip = "192.168.2.71",
-    time = "10:15",
+    ip = net.get_local_ip(),
+    time = "--:--",
     hashrate = "6.81",
     hashrate_unit = "TH/s",
     temp = "71.5",
@@ -140,6 +142,7 @@ end
 
 -- ── Main Render ──
 local function render_dashboard()
+    claw.display.clear_page(PAGE)
     claw.display.button(PAGE, 1, 0, 0, SCR_W, SCR_H, "", BG)
     draw_top_bar()
 
@@ -159,7 +162,75 @@ local function render_dashboard()
     draw_system_card(PAD, row4_y, 100)
 end
 
+-- ── Data Fetchers ──
+local function update_time()
+    local t = sys.date("*t", sys.time())
+    DATA.time = string.format("%02d:%02d", t.hour, t.min)
+end
+
+local function fetch_btc_price()
+    net.get("/api/coingecko/simple/price?ids=bitcoin&vs_currencies=usd", {}, function(status, body, headers)
+        if status ~= 200 then
+            sys.log("warn", "BTC price fetch failed: " .. tostring(status))
+            return
+        end
+        local data = net.parse_json(body)
+        if data and data.bitcoin and data.bitcoin.usd then
+            DATA.btc_price = tostring(math.floor(data.bitcoin.usd))
+        end
+    end)
+end
+
+local function fetch_network()
+    net.get("/api/mempool/blocks/tip/height", {}, function(status, body, headers)
+        if status ~= 200 then
+            sys.log("warn", "Network height fetch failed: " .. tostring(status))
+            return
+        end
+        local height = tonumber(body)
+        if height then
+            DATA.network = tostring(height)
+        end
+    end)
+end
+
+-- Read device hashrate from the network API.
+local function read_miner_stats()
+    local stats = net.get_network_stats()
+    if not stats then
+        sys.log("warn", "Network stats unavailable, using defaults")
+        return
+    end
+
+    if stats.hashrate_ths then
+        DATA.hashrate = tostring(stats.hashrate_ths)
+    end
+    if stats.unit then
+        DATA.hashrate_unit = tostring(stats.unit)
+    end
+end
+
+local function refresh_data()
+    update_time()
+    fetch_btc_price()
+    fetch_network()
+    read_miner_stats()
+end
+
 -- ── Entry ──
 claw.display.clear_page(PAGE)
 claw.display.create_page(PAGE, "")
+refresh_data()
 render_dashboard()
+
+-- Refresh every 30 seconds; handle touch events.
+while true do
+    local p, obj = claw.display.pop_event()
+    if p then
+        sys.log("info", "dashboard event page=" .. p .. " obj=" .. obj)
+    end
+
+    render_dashboard()
+    refresh_data()
+    delay.delay_ms(30000)
+end

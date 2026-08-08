@@ -179,11 +179,9 @@ end
 
 ### UI Main Loop
 
-A normal Skill UI must run an event loop to receive touch events. The simulator provides two common patterns:
+A normal Skill UI must run an event loop to receive touch events. In the current simulator implementation `pop_event()` is **non-blocking** and returns `nil, nil` when no touch has occurred, so the loop must yield time back to the system.
 
-**Pattern 1 — pure event driven**
-
-`pop_event()` is non-blocking and returns `nil, nil` when no touch has occurred. For a simple UI that only reacts to touches:
+**Recommended pattern — event driven + yield**
 
 ```lua
 while true do
@@ -191,14 +189,12 @@ while true do
     if page_id then
         -- handle touch
     end
+
+    delay.delay_ms(100)  -- ~30 fps, keeps UI responsive
 end
 ```
 
-> Note: because `pop_event()` does not block, this pattern keeps the Lua coroutine running. It is safe in the simulator but burns CPU; add `delay.delay_ms(33)` if you also need animations.
-
-**Pattern 2 — event driven + animation**
-
-For games or animations that must update every frame, call `delay.delay_ms(ms)` to yield time to the browser:
+For games or animations that update every frame:
 
 ```lua
 while true do
@@ -207,12 +203,12 @@ while true do
         -- handle touch
     end
 
-    -- per-frame update
     updateAnimation()
-
     delay.delay_ms(33)  -- ~30 fps
 end
 ```
+
+> **Important:** Omitting `delay.delay_ms()` in a `while true do` loop will keep the Lua coroutine running continuously and may make the simulator UI unresponsive.
 
 ---
 
@@ -394,15 +390,19 @@ local t = sys.date("*t", sys.time())
 
 ## 5. `net` — Network API
 
-> In the simulator requests are sent through the browser `fetch` and are subject to CORS.
+> In the simulator requests are sent through the browser `fetch` and are subject to CORS. Use relative paths (`/api/...`) and configure an Nginx/Vite proxy for external APIs.
 
 ### `net.get(url, options, callback)`
 
-Performs an HTTP GET request.
+Performs an HTTP GET request. The response `body` is a string; use `net.parse_json()` to convert JSON responses to a Lua table.
 
 ```lua
-net.get("https://api.example.com/price", {}, function(status, body, headers)
+net.get("/api/mempool/v1/prices", {}, function(status, body, headers)
     sys.log("info", "status=" .. status)
+    local data = net.parse_json(body)
+    if data then
+        sys.log("info", "BTC=$" .. data.USD)
+    end
 end)
 ```
 
@@ -410,7 +410,7 @@ end)
 
 | Name | Type | Description |
 |------|------|-------------|
-| `url` | string | Request URL |
+| `url` | string | Request URL. Prefer relative paths for external APIs to avoid CORS. |
 | `options` | table | Optional fetch options (`headers`, etc.) |
 | `callback` | function | `function(status, body, headers)` |
 
@@ -418,11 +418,12 @@ end)
 
 ### `net.post(url, body, options, callback)`
 
-Performs an HTTP POST request. Tables are JSON-encoded automatically.
+Performs an HTTP POST request. Tables are JSON-encoded automatically; the response `body` is a string.
 
 ```lua
-net.post("https://api.example.com/data", { foo = "bar" }, {}, function(status, body)
-    sys.log("info", "posted")
+net.post("/api/my-service/data", { foo = "bar" }, {}, function(status, body)
+    sys.log("info", "posted, status=" .. status)
+    local data = net.parse_json(body)
 end)
 ```
 
@@ -459,6 +460,73 @@ URL-encodes a string.
 local s = net.url_encode("hello world")
 -- s = "hello%20world"
 ```
+
+---
+
+### `net.get_network_stats()`
+
+Returns default network statistics. In the simulator this returns a fixed hashrate so Skills can be developed without relying on external APIs.
+
+```lua
+local stats = net.get_network_stats()
+-- stats.hashrate_ths = 12
+-- stats.unit = "TH/s"
+-- stats.source = "default"
+```
+
+**Returns**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `hashrate_ths` | number | Network hashrate in TH/s |
+| `unit` | string | `"TH/s"` |
+| `source` | string | `"default"` in simulator |
+
+---
+
+### `net.get_coin_price(coin, callback)`
+
+Fetches the current USD price for the given coin abbreviation. The simulator tries `mempool.space` first, then falls back to `CoinGecko`, and finally to a hard-coded default if both fail (e.g. due to CORS or network errors).
+
+```lua
+net.get_coin_price("BTC", function(price)
+    sys.log("info", "BTC=$" .. price.usd .. " from " .. price.source)
+end)
+```
+
+**Parameters**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `coin` | string | Coin symbol, e.g. `"BTC"`, `"ETH"`, `"LTC"`, `"DOGE"` |
+| `callback` | function | `function(price)` where `price` is a table |
+
+**Callback argument**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `coin` | string | Uppercase coin symbol |
+| `usd` | number | USD price |
+| `source` | string | `"mempool"`, `"coingecko"`, or `"default"` |
+
+> **CORS note:** Direct browser requests to mempool.space / CoinGecko may be blocked by CORS. Use an Nginx reverse proxy (or Vite dev proxy) in production. See the deployment notes in section 9.
+
+---
+
+### `net.get_local_ip()`
+
+Returns a placeholder local IP address.
+
+```lua
+local ip = net.get_local_ip()
+-- ip = "192.168.1.100"
+```
+
+**Returns**
+
+| # | Type | Description |
+|---|------|-------------|
+| 1 | string | Local IP string |
 
 ---
 
@@ -540,3 +608,47 @@ while true do
     delay.delay_ms(33)
 end
 ```
+
+---
+
+## 8. Security / Sandbox Notes
+
+The simulator runs user-submitted Lua code in a restricted environment. The following are blocked when a Skill is loaded or run:
+
+| Blocked item | Example | Reason |
+|--------------|---------|--------|
+| `os.execute` | `os.execute("rm -rf /")` | Dangerous shell commands |
+| `io.open` / `io.popen` | `io.open("/etc/passwd")` | File system access |
+| `require` with paths | `require("os")` | Loading unsafe standard libraries |
+| `loadfile` / `dofile` | `dofile("/tmp/x.lua")` | Loading external files |
+| `js` / `interop` / `window` / `document` | `js.global.alert()` | Preventing escape to browser JS environment |
+
+If a Skill contains blocked calls, the simulator will refuse to run it and show an error in the Debug Log.
+
+> These restrictions apply to the simulator. The real BC08 device may have a different sandbox policy, but Skill code should always avoid shell execution and direct host file access.
+
+---
+
+## 9. CORS / Deployment Notes
+
+Direct browser requests from `localhost` or your domain to `mempool.space` or `api.coingecko.com` are often blocked by CORS. `iframe` does **not** bypass CORS.
+
+The simulator code already uses relative paths (`/api/mempool/...` and `/api/coingecko/...`), so you only need to configure the proxy on the server side.
+
+### Nginx (production)
+
+```nginx
+location /api/mempool/ {
+    proxy_pass https://mempool.space/api/;
+    proxy_ssl_server_name on;
+}
+
+location /api/coingecko/ {
+    proxy_pass https://api.coingecko.com/api/v3/;
+    proxy_ssl_server_name on;
+}
+```
+
+### Vite dev server (local development)
+
+`vite.config.js` already contains the proxy configuration for `/api/mempool` and `/api/coingecko`.

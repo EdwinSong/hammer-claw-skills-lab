@@ -280,8 +280,10 @@ hammer-claw-skills-lab/
 ├── scripts/                      # Build and validation scripts
 │   └── generate_catalog.py       # Generates dist/skills-catalog.json
 ├── skills/                       # All shared skills
-│   └── game_minesweeper/         # Minesweeper game
-└── ...                           # Additional project files
+│   ├── game_minesweeper/         # Minesweeper game
+│   └── miner_dashboard/          # Bitcoin miner dashboard
+├── bc08_lua_api_reference.md     # Lua API reference for BC08 device
+├── bc08_lua_sandbox_design.md    # Lua sandbox design for BC08 device
 ```
 
 ---
