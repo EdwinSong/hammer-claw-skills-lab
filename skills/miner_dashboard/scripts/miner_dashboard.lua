@@ -1,15 +1,15 @@
 -- ================================================================
 -- miner_dashboard.lua — BITCOIN MINER DASHBOARD
--- @page_id 9
+-- @page_id 5
 -- @name MinerDashboard
 -- @desc Live Bitcoin miner dashboard for BC08-P4 LCD.
---       Fetches BTC price & block height from public APIs and
---       reads device hashrate from net.get_network_stats().
+--       Uses the Capability Bus for real-time miner telemetry,
+--       system module for IP/time, and storage for static config.
 -- ================================================================
 
-local PAGE = 9
+local PAGE = 5
 
--- Screen dimensions
+-- Screen dimensions (safe drawing area)
 local SCR_W, SCR_H = 720, 1280
 local PAD = 24
 local GAP = 24
@@ -48,11 +48,12 @@ local ICONS = {
 }
 
 -- Dashboard data.
---   ip / time / hashrate / btc_price / network — live system APIs (see refreshers below)
---   temp / pool / worker / pass / mode / freq / volt / os — no system API exists,
---   read from the on-device config file (CONFIG_FILE) so nothing is hardcoded here.
+--   ip / time             -> system.ip() / system.date()
+--   hashrate / temp / btc / network -> capability.call("miner_get_sensors")
+--   pool / worker / pass / mode / freq / volt -> capability.call("miner_get_status")
+--   os                    -> capability.call("miner_get_system_info")
 local DATA = {
-    ip = net.get_local_ip(),
+    ip = "--",
     time = "--:--",
     hashrate = "--",
     hashrate_unit = "TH/s",
@@ -70,25 +71,30 @@ local DATA = {
     os = "--",
 }
 
--- On-device config for fields without a system API. JSON object, e.g.
--- {"temp":"71.5","pool":"btc.zsolo.bid","worker":"1NjHG...uz6fm","pass":".BC04",
---  "mode":"Normal","freq":"750 MHz","volt":"4800 mV","os":"Thor OS 1.0.0"}
+-- Optional on-device config overlay for fields that may be hard to read via capabilities.
 local CONFIG_FILE = storage.join_path(storage.get_root_dir(), "skills", "miner_dashboard", "config.json")
 local CONFIG_KEYS = { "temp", "pool", "worker", "pass", "mode", "freq", "volt", "os" }
 
+-- Native modules (also exposed as globals; using require is closer to device behaviour).
+local capability = require("capability")
+local json = require("json")
+local system = require("system")
+
+-- ── Helpers ──
+local function safe_decode(str)
+    if type(str) ~= "string" or str == "" then return nil end
+    local ok, data = pcall(json.decode, str)
+    if ok and type(data) == "table" then return data end
+    return nil
+end
+
 local function load_config()
     local ok, exists = pcall(storage.exists, CONFIG_FILE)
-    if not ok or not exists then
-        sys.log("warn", "config not found: " .. CONFIG_FILE)
-        return
-    end
+    if not ok or not exists then return end
     local ok_read, content = pcall(storage.read_file, CONFIG_FILE)
-    if not ok_read or not content then
-        sys.log("warn", "config read failed")
-        return
-    end
-    local cfg = net.parse_json(content)
-    if type(cfg) ~= "table" then
+    if not ok_read or not content then return end
+    local cfg = safe_decode(content)
+    if not cfg then
         sys.log("warn", "config is not valid JSON")
         return
     end
@@ -97,7 +103,6 @@ local function load_config()
     end
 end
 
--- ── Helpers ──
 local function draw_card(x, y, w, h, border_clr, id)
     claw.display.button(PAGE, id, x, y, w, h, "", border_clr)
     claw.display.button(PAGE, id + 1, x + 2, y + 2, w - 4, h - 4, "", CARD_BG)
@@ -194,70 +199,72 @@ end
 
 -- ── Data Fetchers ──
 local function update_time()
-    local t = sys.date("*t", sys.time())
+    local t = system.date("*t", system.time())
     DATA.time = string.format("%02d:%02d", t.hour, t.min)
 end
 
-local function fetch_btc_price()
-    net.get_coin_price("BTC", function(price)
-        if price and price.usd then
-            DATA.btc_price = tostring(math.floor(price.usd))
-        else
-            sys.log("warn", "BTC price fetch failed")
-        end
-    end)
-end
-
-local function fetch_network()
-    net.get("/api/mempool/blocks/tip/height", {}, function(status, body, headers)
-        if status ~= 200 then
-            sys.log("warn", "Network height fetch failed: " .. tostring(status))
-            return
-        end
-        local height = tonumber(body)
-        if height then
-            DATA.network = tostring(height)
-        end
-    end)
-end
-
--- Read device hashrate from the network API.
-local function read_miner_stats()
-    local stats = net.get_network_stats()
-    if not stats then
-        sys.log("warn", "Network stats unavailable, using defaults")
+local function read_telemetry()
+    local ok, out = capability.call("miner_get_sensors", {})
+    if not ok then
+        sys.log("warn", "miner_get_sensors failed: " .. tostring(out))
         return
     end
+    local s = safe_decode(out)
+    if not s then
+        sys.log("warn", "miner_get_sensors returned invalid JSON")
+        return
+    end
+    if s.hashrate ~= nil then DATA.hashrate = string.format("%.2f", tonumber(s.hashrate) or 0) end
+    if s.chip_temp_0 ~= nil then DATA.temp = tostring(s.chip_temp_0) end
+    if s.btc_price ~= nil then DATA.btc_price = tostring(math.floor(tonumber(s.btc_price) or 0)) end
+    if s.latest_block_height ~= nil then DATA.network = tostring(s.latest_block_height) end
+end
 
-    if stats.hashrate_ths then
-        DATA.hashrate = tostring(stats.hashrate_ths)
-    end
-    if stats.unit then
-        DATA.hashrate_unit = tostring(stats.unit)
-    end
+local function read_status()
+    local ok, out = capability.call("miner_get_status", {})
+    if not ok then return end
+    local s = safe_decode(out)
+    if not s then return end
+    if s.pool ~= nil then DATA.pool = tostring(s.pool) end
+    if s.worker ~= nil then DATA.worker = tostring(s.worker) end
+    if s.work_mode ~= nil then DATA.mode = tostring(s.work_mode) end
+    if s.frequency ~= nil then DATA.freq = tostring(s.frequency) .. " MHz" end
+    if s.voltage ~= nil then DATA.volt = string.format("%.0f mV", tonumber(s.voltage) * 10) end
+end
+
+local function read_system_info()
+    local ok, out = capability.call("miner_get_system_info", {})
+    if not ok then return end
+    local s = safe_decode(out)
+    if not s then return end
+    local os_str = ""
+    if s.firmware_version then os_str = "Thor OS " .. tostring(s.firmware_version) end
+    if os_str ~= "" then DATA.os = os_str end
 end
 
 local function refresh_data()
+    DATA.ip = system.ip() or "--"
     update_time()
-    fetch_btc_price()
-    fetch_network()
-    read_miner_stats()
+    read_telemetry()
+    read_status()
+    read_system_info()
+    load_config()
 end
 
 -- ── Entry ──
+claw.display.create_page(PAGE, "Miner Dashboard")
 claw.display.clear_page(PAGE)
-claw.display.create_page(PAGE, "")
 refresh_data()
 render_dashboard()
 
 -- Refresh every 30 seconds; handle touch events.
 while true do
     local p, obj = claw.display.pop_event()
-    if p then
+    if p == PAGE and obj then
         sys.log("info", "dashboard event page=" .. p .. " obj=" .. obj)
     end
 
-    render_dashboard()
     refresh_data()
+    render_dashboard()
     delay.delay_ms(30000)
 end

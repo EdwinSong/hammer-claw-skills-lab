@@ -1,12 +1,13 @@
 -- ================================================================
 -- watercooling_light_timer.lua — Aqua Core water-cooling RGB timer
--- @page_id 1
--- @desc Schedule the BC08-P4 water-cooling RGB LED to turn off
+-- @page_id 5
+-- @name WaterCoolingLightTimer
+-- @desc Schedule the BC08-P4 water-cooling ARGB LED to turn off
 --       after a delay (minutes/hours) or at a specific clock time.
---       Aqua Core neon UI, image-based digital display, English text.
+--       Uses capability.call for real LED control and system.* for clocks.
 -- ================================================================
 
-local PAGE = 10
+local PAGE = 5
 local W, H = claw.display.get_size()
 local PAD = 24
 local GAP = 16
@@ -21,6 +22,11 @@ local CYAN = 0x00E5FF
 local PURPLE = 0xA855F7
 local PINK = 0xEC4899
 local BLUE = 0x3B82F6
+
+-- Native modules
+local capability = require("capability")
+local json = require("json")
+local system = require("system")
 
 -- Asset paths
 local ASSET_DIR = "F:skills/watercooling_light_timer/assets/"
@@ -49,10 +55,10 @@ for d = 0, 9 do
 end
 
 local COLORS = {
-    { name = "Cyan", value = CYAN, icon = ICONS.dot_cyan, ball = ASSET_DIR .. "light_ball_cyan.png" },
-    { name = "Pink", value = PINK, icon = ICONS.dot_pink, ball = ASSET_DIR .. "light_ball_pink.png" },
-    { name = "Purple", value = PURPLE, icon = ICONS.dot_purple, ball = ASSET_DIR .. "light_ball_purple.png" },
-    { name = "Blue", value = BLUE, icon = ICONS.dot_blue, ball = ASSET_DIR .. "light_ball_blue.png" },
+    { name = "Cyan", value = CYAN, icon = ICONS.dot_cyan, ball = ASSET_DIR .. "light_ball_cyan.png", rgb = { r = 0, g = 229, b = 255 } },
+    { name = "Pink", value = PINK, icon = ICONS.dot_pink, ball = ASSET_DIR .. "light_ball_pink.png", rgb = { r = 236, g = 72, b = 153 } },
+    { name = "Purple", value = PURPLE, icon = ICONS.dot_purple, ball = ASSET_DIR .. "light_ball_purple.png", rgb = { r = 168, g = 85, b = 247 } },
+    { name = "Blue", value = BLUE, icon = ICONS.dot_blue, ball = ASSET_DIR .. "light_ball_blue.png", rgb = { r = 59, g = 130, b = 246 } },
 }
 
 local PRESETS = {
@@ -68,8 +74,7 @@ local DIGIT_H = 78
 local COLON_W = 26
 local TIME_W = 6 * DIGIT_W + 2 * COLON_W
 
--- State file for timer persistence (absolute path from storage root,
--- same pattern as game_minesweeper — relative paths may fail on device)
+-- State file for timer persistence
 local STATE_FILE = storage.join_path(storage.get_root_dir(), "skills", "watercooling_light_timer", "state.json")
 
 -- Application state
@@ -89,6 +94,14 @@ local ctx = {
 local timezone_offset_sec = 0
 local timezone_label = "UTC"
 
+-- ── Helpers ──
+local function safe_json_decode(str)
+    if type(str) ~= "string" or str == "" then return nil end
+    local ok, data = pcall(json.decode, str)
+    if ok and type(data) == "table" then return data end
+    return nil
+end
+
 -- ── Julian day helpers ──
 local function ymd_to_days(y, m, d)
     local a = math.floor((14 - m) / 12)
@@ -103,8 +116,8 @@ end
 
 -- ── Timezone ──
 local function compute_timezone_offset()
-    local now = sys.time()
-    local local_t = sys.date("*t", now)
+    local now = system.time()
+    local local_t = system.date("*t", now)
     local local_as_utc = time_to_utc_seconds(local_t.year, local_t.month, local_t.day, local_t.hour, local_t.min, local_t.sec)
     return local_as_utc - now
 end
@@ -121,10 +134,13 @@ end
 local function apply_rgb()
     if not ctx.light_on then
         claw.rgb.off()
+        capability.call("miner_set_led_mode", { on = false })
         return
     end
-    local c = COLORS[ctx.rgb_index].value
-    claw.rgb.set(c)
+    local c = COLORS[ctx.rgb_index]
+    claw.rgb.set(c.value)
+    capability.call("miner_set_led_mode", { on = true })
+    capability.call("miner_set_led_color", c.rgb)
 end
 
 -- ── Delay duration ──
@@ -145,7 +161,7 @@ local function format_time_hms(total_seconds)
 end
 
 local function format_time(ts)
-    local t = sys.date("*t", ts)
+    local t = system.date("*t", ts)
     return string.format("%02d:%02d", t.hour, t.min)
 end
 
@@ -182,9 +198,10 @@ local function save_state()
 end
 
 local function load_state()
-    if not storage.exists(STATE_FILE) then return false end
-    local ok, content = pcall(function() return storage.read_file(STATE_FILE) end)
-    if not ok then return false end
+    local ok, exists = pcall(storage.exists, STATE_FILE)
+    if not ok or not exists then return false end
+    local ok_read, content = pcall(storage.read_file, STATE_FILE)
+    if not ok_read or not content then return false end
     local saved = json_decode(content)
     for k, v in pairs(saved) do
         ctx[k] = v
@@ -194,8 +211,8 @@ end
 
 -- ── Timer logic ──
 local function compute_schedule_target(hour, min)
-    local now = sys.time()
-    local local_t = sys.date("*t", now)
+    local now = system.time()
+    local local_t = system.date("*t", now)
     local target_local = time_to_utc_seconds(local_t.year, local_t.month, local_t.day, hour, min, 0)
     local target_utc = target_local - timezone_offset_sec
     if target_utc <= now then
@@ -206,7 +223,7 @@ end
 
 local function get_remaining_seconds()
     if not ctx.active then return 0 end
-    local now = sys.time()
+    local now = system.time()
     if ctx.mode == "delay" then
         return (ctx.started_at + math.floor(get_delay_duration_ms() / 1000)) - now
     else
@@ -216,7 +233,7 @@ end
 
 local function start_timer()
     if ctx.mode == "delay" then
-        ctx.started_at = sys.time()
+        ctx.started_at = system.time()
     else
         ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
     end
@@ -432,7 +449,7 @@ local function draw_schedule_card()
     if ctx.active then
         target = ctx.target_ts
     end
-    local diff = math.max(0, target - sys.time())
+    local diff = math.max(0, target - system.time())
     local hh = math.floor(diff / 3600)
     local mm = math.floor((diff % 3600) / 60)
     local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
@@ -484,7 +501,7 @@ end
 local function draw_custom_input()
     if ctx.mode == "schedule" then return end
     local y = 895
-    local cx = W // 2
+    local cx = math.floor(W / 2)
     local btn_size = 84
 
     -- Countdown: just +/- buttons centered with a divider
@@ -614,9 +631,9 @@ local function check_deadline()
     if not ctx.active then return end
     local remaining = get_remaining_seconds()
     if remaining <= 0 then
-        claw.rgb.off()
-        ctx.active = false
         ctx.light_on = false
+        apply_rgb()
+        ctx.active = false
         save_state()
         sys.log("info", "timer expired, LED off")
         draw_ui()
