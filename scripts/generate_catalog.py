@@ -62,7 +62,7 @@ def total_size(directory: Path) -> int:
     )
 
 
-GITHUB_RAW_BASE = "https://raw.githubusercontent.com/HammerMiner/hammer-claw-skills-lab/main"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/EdwinSong/hammer-claw-skills-lab/main"
 PREVIEW_FILENAME = "preview.png"
 
 
@@ -121,7 +121,7 @@ def main():
 
     catalog = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "repo": "HammerMiner/hammer-claw-skills-lab",
+        "repo": "EdwinSong/hammer-claw-skills-lab",
         "total": len(skills),
         "skills": skills,
     }
