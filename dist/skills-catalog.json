@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T07:42:12Z",
+  "generated_at": "2026-09-11T07:59:34Z",
   "repo": "EdwinSong/hammer-claw-skills-lab",
   "total": 3,
   "skills": [
@@ -79,7 +79,7 @@
       ]
     },
     {
-      "id": "hydro_light_control",
+      "id": "watercooling_light_timer",
       "dir": "watercooling_light_timer",
       "title": "Hydro Light Control",
       "description": "Schedule the BC08-P4 water-cooling RGB LED to turn off after a delay (minutes or hours) or at a specific clock time. Supports state persistence and shows current timezone. Invoke when the user asks for LED timer, schedule light off, water-cooling RGB shutdown, or turn off the light after a delay.",
@@ -87,7 +87,7 @@
       "category": "utility",
       "categories": [
         "utility",
-        "hardware"
+        "rgb"
       ],
       "preview_url": "https://raw.githubusercontent.com/EdwinSong/hammer-claw-skills-lab/main/skills/watercooling_light_timer/preview.png",
       "devices": [
@@ -100,8 +100,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 168406,
-      "sha256": "7c82b90abeaf5ded4dcf0ca3d6371f0c392269a17de6c6ddf0fbb85ac3421072",
+      "total_size": 168392,
+      "sha256": "f136ed72b336917672eb89b8d92c971194598ecda66383019b7a273128f4c5ff",
       "files": [
         "SKILL.md",
         "_metadata.json",
