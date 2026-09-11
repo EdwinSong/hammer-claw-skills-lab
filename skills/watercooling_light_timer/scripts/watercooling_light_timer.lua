@@ -36,8 +36,6 @@ local FS_BIG = 30
 
 -- Native modules (only whitelisted modules may be required)
 local capability = require("capability")
-local json = require("json")
-local storage = require("storage")
 local system = require("system")
 local delay = require("delay")
 
@@ -53,10 +51,6 @@ local ICONS = {
     stop = ASSET_DIR .. "stop_btn.png",
     preset_active = ASSET_DIR .. "preset_active.png",
     preset_inactive = ASSET_DIR .. "preset_inactive.png",
-    dot_cyan = ASSET_DIR .. "color_dot_cyan.png",
-    dot_pink = ASSET_DIR .. "color_dot_pink.png",
-    dot_purple = ASSET_DIR .. "color_dot_purple.png",
-    dot_blue = ASSET_DIR .. "color_dot_blue.png",
     digit_colon = ASSET_DIR .. "digit_colon.png",
     chevron_up = ASSET_DIR .. "chevron_up.png",
     chevron_down = ASSET_DIR .. "chevron_down.png",
@@ -68,10 +62,10 @@ for d = 0, 9 do
 end
 
 local COLORS = {
-    { name = "Cyan", icon = ICONS.dot_cyan, ball = ASSET_DIR .. "light_ball_cyan.png", rgb = { r = 0, g = 229, b = 255 } },
-    { name = "Pink", icon = ICONS.dot_pink, ball = ASSET_DIR .. "light_ball_pink.png", rgb = { r = 236, g = 72, b = 153 } },
-    { name = "Purple", icon = ICONS.dot_purple, ball = ASSET_DIR .. "light_ball_purple.png", rgb = { r = 168, g = 85, b = 247 } },
-    { name = "Blue", icon = ICONS.dot_blue, ball = ASSET_DIR .. "light_ball_blue.png", rgb = { r = 59, g = 130, b = 246 } },
+    { name = "Cyan", rgb = { r = 0, g = 229, b = 255 } },
+    { name = "Pink", rgb = { r = 236, g = 72, b = 153 } },
+    { name = "Purple", rgb = { r = 168, g = 85, b = 247 } },
+    { name = "Blue", rgb = { r = 59, g = 130, b = 246 } },
 }
 
 local PRESETS = {
@@ -86,9 +80,6 @@ local DIGIT_W = 52
 local DIGIT_H = 78
 local COLON_W = 26
 local TIME_W = 6 * DIGIT_W + 2 * COLON_W
-
--- State file for timer persistence (flash root is /fatfs)
-local STATE_FILE = storage.join_path(storage.get_root_dir(), "skills", "watercooling_light_timer", "state.json")
 
 -- Application state
 local ctx = {
@@ -143,11 +134,13 @@ end
 
 -- ── RGB control via capability bus (API_REFERENCE.md §3) ──
 local function apply_rgb()
+    local c = COLORS[ctx.rgb_index]
     if not ctx.light_on then
+        print("apply_rgb: off")
         capability.call("miner_set_led_mode", { on = false })
         return
     end
-    local c = COLORS[ctx.rgb_index]
+    print(string.format("apply_rgb: color=%s rgb=%d,%d,%d", c.name, c.rgb.r, c.rgb.g, c.rgb.b))
     capability.call("miner_set_led_mode", { on = true })
     capability.call("miner_set_led_color", c.rgb)
 end
@@ -167,35 +160,6 @@ local function format_time_hms(total_seconds)
     local m = math.floor((total_seconds % 3600) / 60)
     local s = total_seconds % 60
     return string.format("%02d:%02d:%02d", h, m, s)
-end
-
--- ── Persistence (storage module, pcall-protected) ──
-local PERSIST_KEYS = { "mode", "active", "target_ts", "started_at", "delay_value", "delay_unit", "schedule_hour", "schedule_min" }
-
-local function save_state()
-    local ok, err = pcall(function()
-        local payload = {}
-        for _, k in ipairs(PERSIST_KEYS) do
-            payload[k] = ctx[k]
-        end
-        storage.write_file(STATE_FILE, json.encode(payload))
-    end)
-    if not ok then
-        print("warn: save state failed: " .. tostring(err))
-    end
-end
-
-local function load_state()
-    local ok, exists = pcall(storage.exists, STATE_FILE)
-    if not ok or not exists then return false end
-    local ok_read, content = pcall(storage.read_file, STATE_FILE)
-    if not ok_read or type(content) ~= "string" or content == "" then return false end
-    local ok_dec, saved = pcall(json.decode, content)
-    if not ok_dec or type(saved) ~= "table" then return false end
-    for _, k in ipairs(PERSIST_KEYS) do
-        if saved[k] ~= nil then ctx[k] = saved[k] end
-    end
-    return true
 end
 
 -- ── Timer logic ──
@@ -223,17 +187,16 @@ end
 local function start_timer()
     if ctx.mode == "delay" then
         ctx.started_at = system.time()
+        print(string.format("timer started: delay mode value=%d unit=%s", ctx.delay_value, ctx.delay_unit))
     else
         ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+        print(string.format("timer started: schedule target_ts=%d", ctx.target_ts))
     end
     ctx.active = true
-    save_state()
-    print("timer started: mode=" .. ctx.mode)
 end
 
 local function cancel_timer()
     ctx.active = false
-    save_state()
     print("timer cancelled")
 end
 
@@ -281,8 +244,7 @@ end
 -- bases, so IDs never appear as bare magic numbers.
 local ID_BG = 1         -- full-screen background
 local ID_HEADER = 10    -- 11..14: title image, power button/image, timezone
-local ID_STATUS = 20    -- 20..39: status card, labels, color dots, light ball
-local ID_MODE = 40      -- 40..44: Timer/Schedule pill switch
+local ID_MODE = 40      -- 40..49: Timer/Schedule mode switch
 local ID_RING = 50      -- 50..60: ring image + countdown digits
 local ID_SCHED = 70     -- 70..93: schedule card, chevrons, summary, countdown
 local ID_WHEEL_H = 100  -- 100..128: hours wheel
@@ -293,7 +255,7 @@ local ID_FOOTER = 195   -- footer hint
 local ID_START = 196    -- 196..198: start/stop button
 
 local function draw_header(base)
-    local y = SAFE_TOP + 8 -- 66, keep clear of the system status bar
+    local y = SAFE_TOP + 12 -- 70, keep clear of the system status bar
     local power_size = 48
     draw_image(PAD, y, ICONS.title, base + 1, 220, 44)
     claw.display.button(PAGE, base + 2, SCR_W - PAD - power_size, y, power_size, power_size, "", BG)
@@ -302,39 +264,10 @@ local function draw_header(base)
     draw_label(SCR_W - PAD - power_size - 16 - tz_w, y + 16, timezone_label, SUBTEXT, FS_SMALL, base + 4)
 end
 
-local function draw_status_card(base)
-    local y = 128
-    local h = 156
-    draw_card(PAD, y, SCR_W - PAD * 2, h, CARD_BG, base)
-
-    local status_text = ctx.light_on and "LIGHT EFFECT ON" or "LIGHT EFFECT OFF"
-    draw_label(PAD + 24, y + 24, status_text, TEXT, FS_BIG, base + 1)
-
-    draw_label(PAD + 24, y + 68, "RGB Flow · ", SUBTEXT, FS_BODY, base + 2)
-    local color_name = COLORS[ctx.rgb_index].name
-    local prefix_w = text_width("RGB Flow · ", FS_BODY)
-    draw_label(PAD + 24 + prefix_w, y + 68, color_name, CYAN, FS_BODY, base + 3)
-
-    -- Color dots: selected dot gets a cyan frame behind it
-    local dot_size = 48
-    local dot_gap = 56
-    for i, c in ipairs(COLORS) do
-        local dx = PAD + 24 + (i - 1) * dot_gap
-        if i == ctx.rgb_index then
-            draw_card(dx - 6, y + 100 - 6, dot_size + 12, dot_size + 12, CYAN, base + 10 + i)
-        end
-        claw.display.button(PAGE, base + 4 + i, dx, y + 100, dot_size, dot_size, "", CARD_BG)
-        draw_image(dx, y + 100, c.icon, base + 14 + i, dot_size, dot_size)
-    end
-
-    local ball_size = 100
-    draw_image(SCR_W - PAD - 24 - ball_size, y + (h - ball_size) / 2, COLORS[ctx.rgb_index].ball, base + 19, ball_size, ball_size)
-end
-
 local function draw_mode_switch(base)
-    local y = 296
-    local pill_w = 240
-    local pill_h = 36
+    local y = 210
+    local pill_w = 360
+    local pill_h = 60
     local pill_x = math.floor((SCR_W - pill_w) / 2)
     local half = math.floor(pill_w / 2)
 
@@ -342,17 +275,17 @@ local function draw_mode_switch(base)
 
     local count_active = ctx.mode == "delay"
     claw.display.button(PAGE, base + 1, pill_x, y, half, pill_h, "", count_active and CYAN or STROKE)
-    draw_label_center(pill_x + half / 2, y + 11, "Timer", count_active and BG or SUBTEXT, FS_SMALL, base + 2)
+    draw_label_center(pill_x + half / 2, y + 18, "Timer", count_active and BG or SUBTEXT, FS_TITLE, base + 2)
 
     local sched_active = ctx.mode == "schedule"
     claw.display.button(PAGE, base + 3, pill_x + half, y, half, pill_h, "", sched_active and CYAN or STROKE)
-    draw_label_center(pill_x + half + half / 2, y + 11, "Schedule", sched_active and BG or SUBTEXT, FS_SMALL, base + 4)
+    draw_label_center(pill_x + half + half / 2, y + 18, "Schedule", sched_active and BG or SUBTEXT, FS_TITLE, base + 4)
 end
 
 local function draw_ring(base)
     local ring_w = 440
     local ring_x = math.floor((SCR_W - ring_w) / 2)
-    local ring_y = 340
+    local ring_y = 330
     draw_image(ring_x, ring_y, ICONS.ring, base, ring_w, ring_w)
 
     local cx = ring_x + ring_w / 2
@@ -404,17 +337,17 @@ local function draw_wheel(box_x, box_y, box_w, box_h, value, max_val, id_base)
 end
 
 local function draw_schedule_card(base)
-    local card_y = 348
-    local card_h = 632
+    local card_y = 330
+    local card_h = 560
     draw_card(PAD, card_y, SCR_W - PAD * 2, card_h, CARD_BG, base)
 
-    draw_label(PAD + 32, card_y + 30, "SCHEDULE OFF", TEXT, FS_BIG, base + 1)
-    draw_label(PAD + 32, card_y + 76, "Pick a time to power off", CYAN, FS_BODY, base + 2)
+    draw_label(PAD + 32, card_y + 20, "SCHEDULE OFF", TEXT, FS_BIG, base + 1)
+    draw_label(PAD + 32, card_y + 56, "Pick a time to power off", CYAN, FS_BODY, base + 2)
 
     -- geometry: [hours box][mid col: ^ : v][minutes box][^ v]
     local box_w = 200
-    local box_h = 330
-    local box_y = card_y + 130
+    local box_h = 300
+    local box_y = card_y + 100
     local hours_x = 70
     local mins_x = 370
     local mid_cx = 320          -- colon + hour chevrons
@@ -454,21 +387,21 @@ local function draw_schedule_card(base)
     local hh = math.floor(diff / 3600)
     local mm = math.floor((diff % 3600) / 60)
     local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
-    draw_label_center(SCR_W / 2, card_y + 492, summary, TEXT, FS_TITLE, base + 14)
+    draw_label_center(SCR_W / 2, card_y + 430, summary, TEXT, FS_TITLE, base + 14)
     local sub
     if hh > 0 then
         sub = string.format("in %d hour%s %d min", hh, hh > 1 and "s" or "", mm)
     else
         sub = string.format("in %d min", mm)
     end
-    draw_label_center(SCR_W / 2, card_y + 530, sub, SUBTEXT, FS_BODY, base + 15)
+    draw_label_center(SCR_W / 2, card_y + 470, sub, SUBTEXT, FS_BODY, base + 15)
 
     -- live countdown digits while the timer is running
     if ctx.active then
         local cd = format_time_hms(diff)
         local dw, dh, cw = 26, 39, 13
         local x = (SCR_W - (6 * dw + 2 * cw)) / 2
-        local y = card_y + 562
+        local y = card_y + 500
         for i = 1, #cd do
             local ch = cd:sub(i, i)
             if ch == ":" then
@@ -484,7 +417,7 @@ end
 
 local function draw_presets(base)
     if ctx.mode == "schedule" then return end
-    local y = 815
+    local y = 790
     local h = 64
     local btn_w = math.floor((SCR_W - PAD * 2 - GAP * 3) / 4)
     for i, p in ipairs(PRESETS) do
@@ -500,7 +433,7 @@ end
 
 local function draw_custom_input(base)
     if ctx.mode == "schedule" then return end
-    local y = 895
+    local y = 865
     local cx = math.floor(SCR_W / 2)
     local btn_size = 84
 
@@ -517,13 +450,13 @@ local function draw_custom_input(base)
 end
 
 local function draw_footer(base)
-    draw_label_center(SCR_W / 2, 1006, "LED will turn off automatically", SUBTEXT, FS_SMALL, base)
+    draw_label_center(SCR_W / 2, 960, "LED will turn off automatically", SUBTEXT, FS_SMALL, base)
 end
 
 local function draw_start_button(base)
-    local y = 1052
+    local y = 1000
     local w = SCR_W - PAD * 2
-    local h = 96
+    local h = 90
     local text
     if ctx.active then
         text = "Stop Timer"
@@ -540,11 +473,11 @@ local function draw_start_button(base)
 end
 
 local function draw_ui()
+    print(string.format("draw_ui: mode=%s active=%s light_on=%s rgb_index=%d", ctx.mode, tostring(ctx.active), tostring(ctx.light_on), ctx.rgb_index))
     claw.display.clear_page(PAGE)
     draw_card(0, 0, SCR_W, SCR_H, BG, ID_BG)
 
     draw_header(ID_HEADER)
-    draw_status_card(ID_STATUS)
     draw_mode_switch(ID_MODE)
     if ctx.mode == "schedule" then
         draw_schedule_card(ID_SCHED)
@@ -560,58 +493,66 @@ end
 -- ── Event handling ──
 -- Only buttons are touch controls; images and labels are decorative.
 local function handle_touch(obj)
+    print(string.format("handle_touch: obj=%d", obj))
     if obj == ID_HEADER + 2 then -- power button
         ctx.light_on = not ctx.light_on
-        apply_rgb()
-    elseif obj >= ID_STATUS + 5 and obj <= ID_STATUS + 8 then -- color dots
-        ctx.rgb_index = obj - (ID_STATUS + 4)
+        print("handle_touch: power toggle light_on=" .. tostring(ctx.light_on))
         apply_rgb()
     elseif obj == ID_MODE + 1 then -- Timer pill
+        print("handle_touch: switch to delay mode")
         cancel_timer()
         ctx.mode = "delay"
     elseif obj == ID_MODE + 3 then -- Schedule pill
+        print("handle_touch: switch to schedule mode")
         cancel_timer()
         ctx.mode = "schedule"
     elseif obj >= ID_PRESET and obj <= ID_PRESET + 3 then -- preset buttons
-        cancel_timer()
         local p = PRESETS[obj - ID_PRESET + 1]
+        print("handle_touch: preset " .. p.label)
+        cancel_timer()
         ctx.mode = "delay"
         ctx.delay_value = p.value
         ctx.delay_unit = p.unit
     elseif obj == ID_INPUT then -- minus
         ctx.delay_value = math.max(1, ctx.delay_value - 1)
+        print("handle_touch: delay_value=" .. ctx.delay_value)
     elseif obj == ID_INPUT + 2 then -- plus
         ctx.delay_value = math.min(999, ctx.delay_value + 1)
+        print("handle_touch: delay_value=" .. ctx.delay_value)
     elseif obj == ID_SCHED + 6 then -- hour up
         ctx.schedule_hour = (ctx.schedule_hour + 1) % 24
+        print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
-            save_state()
         end
     elseif obj == ID_SCHED + 8 then -- hour down
         ctx.schedule_hour = (ctx.schedule_hour - 1) % 24
+        print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
-            save_state()
         end
     elseif obj == ID_SCHED + 10 then -- minute up
         ctx.schedule_min = (ctx.schedule_min + 1) % 60
+        print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
-            save_state()
         end
     elseif obj == ID_SCHED + 12 then -- minute down
         ctx.schedule_min = (ctx.schedule_min - 1) % 60
+        print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
-            save_state()
         end
     elseif obj == ID_START then -- start/stop button
         if ctx.active then
+            print("handle_touch: stop button")
             cancel_timer()
         else
+            print("handle_touch: start button")
             start_timer()
         end
+    else
+        print("handle_touch: unhandled obj=" .. obj)
     end
     draw_ui()
 end
@@ -620,11 +561,11 @@ end
 local function check_deadline()
     if not ctx.active then return end
     local remaining = get_remaining_seconds()
+    print(string.format("check_deadline: remaining=%d mode=%s", remaining, ctx.mode))
     if remaining <= 0 then
         ctx.light_on = false
         apply_rgb()
         ctx.active = false
-        save_state()
         print("timer expired, LED off")
         draw_ui()
     end
@@ -637,7 +578,6 @@ claw.display.clear_page(PAGE)
 timezone_offset_sec = compute_timezone_offset()
 timezone_label = format_offset(timezone_offset_sec)
 
-load_state()
 apply_rgb()
 check_deadline()
 draw_ui()
@@ -650,7 +590,7 @@ while true do
         handle_touch(obj)
     end
 
-    if ctx.active or ctx.mode == "schedule" then
+    if ctx.active then
         check_deadline()
         draw_ui()
     end
