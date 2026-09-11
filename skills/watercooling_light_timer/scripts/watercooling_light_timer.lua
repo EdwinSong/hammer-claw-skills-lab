@@ -41,8 +41,8 @@ local storage = require("storage")
 local system = require("system")
 local delay = require("delay")
 
--- Asset paths — images live on the /fatfs flash mount
-local ASSET_DIR = "/fatfs/skills/watercooling_light_timer/assets/"
+-- Asset paths — images use the F: flash drive letter (API_REFERENCE.md §5)
+local ASSET_DIR = "F:skills/watercooling_light_timer/assets/"
 local ICONS = {
     title = ASSET_DIR .. "title_aqua_core.png",
     power = ASSET_DIR .. "power_btn.png",

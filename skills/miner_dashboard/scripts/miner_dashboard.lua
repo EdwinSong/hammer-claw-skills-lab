@@ -1,6 +1,6 @@
 -- ================================================================
 -- miner_dashboard.lua — BITCOIN MINER DASHBOARD
--- @page_id 5
+-- @page_id 6
 -- @name MinerDashboard
 -- @desc Live Bitcoin miner dashboard for BC08-P4 LCD.
 --       Reads real-time telemetry through the Capability Bus
@@ -37,8 +37,8 @@ local MAGENTA = 0xFF00B0
 local ORANGE = 0xFF8C00
 local GREEN = 0x00FF41
 
--- Image assets are stored on the device flash under /fatfs/skills/...
-local ASSET_DIR = "/fatfs/skills/miner_dashboard/assets/"
+-- Image assets use the F: flash drive letter (API_REFERENCE.md §5)
+local ASSET_DIR = "F:skills/miner_dashboard/assets/"
 local ICONS = {
     wifi = ASSET_DIR .. "wifi.png",
     status = ASSET_DIR .. "status.png",

@@ -209,9 +209,10 @@ claw.display.label(PAGE, 101, 40, 100, "BC08 Mining Monitor", 0xFFFFFF, 30)
 -- Signature: claw.display.button(page_id, obj_id, x, y, w, h, text, bg_color_hex)
 claw.display.button(PAGE, 102, 40, 160, 640, 120, "", 0x1E222B)
 
--- 5. Draw an image (PNG or JPG located on /fatfs)
+-- 5. Draw an image (PNG or JPG located on the F: flash drive)
 -- Signature: claw.display.image(page_id, obj_id, x, y, w, h, path)
-claw.display.image(PAGE, 103, 50, 180, 80, 80, "/fatfs/skills/my_skill/assets/icon.png")
+-- Image paths use the LVGL drive-letter form: "F:skills/<skill_dir>/assets/icon.png"
+claw.display.image(PAGE, 103, 50, 180, 80, 80, "F:skills/my_skill/assets/icon.png")
 
 -- 6. Poll Touch Events (Non-blocking)
 local pid, oid = claw.display.pop_event()
