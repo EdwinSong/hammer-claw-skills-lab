@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T11:49:51Z",
+  "generated_at": "2026-09-11T12:04:41Z",
   "repo": "EdwinSong/hammer-claw-skills-lab",
   "total": 3,
   "skills": [
@@ -100,8 +100,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 129845,
-      "sha256": "a1c9df7329a6b30ab86e280c0b36a04bd2a081c2fe5c92391563501df107a33d",
+      "total_size": 129941,
+      "sha256": "3e4cb7e7dcc3c4ae9bb6267aa4da3013af5a44fabacec9213022ec1590e9c48a",
       "files": [
         "SKILL.md",
         "_metadata.json",

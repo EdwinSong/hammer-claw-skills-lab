@@ -204,11 +204,11 @@ end
 -- claw.display has no container widget; a button with empty text serves
 -- as a filled background card (API_REFERENCE.md §5 example).
 local function draw_card(x, y, w, h, color, id)
-    claw.display.button(PAGE, id, x, y, w, h, "", color)
+    claw.display.button(PAGE, id, math.floor(x), math.floor(y), math.floor(w), math.floor(h), "", color)
 end
 
 local function draw_label(x, y, text, color, size, id)
-    claw.display.label(PAGE, id, x, y, text, color, size)
+    claw.display.label(PAGE, id, math.floor(x), math.floor(y), text, color, size)
 end
 
 local function text_width(text, size)
@@ -220,7 +220,7 @@ local function draw_label_center(x, y, text, color, size, id)
 end
 
 local function draw_image(x, y, path, id, w, h)
-    claw.display.image(PAGE, id, x, y, w or 48, h or (w or 48), path)
+    claw.display.image(PAGE, id, math.floor(x), math.floor(y), w or 48, h or (w or 48), path)
 end
 
 local function draw_time_images(cx, y, time_str, id_start)
