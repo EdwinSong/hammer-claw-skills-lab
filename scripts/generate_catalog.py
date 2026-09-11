@@ -104,6 +104,7 @@ def main():
 
         entry = {
             "id": skill_id,
+            "dir": skill_dir.name,       # on-disk directory name (may differ from id)
             "title": title,
             "description": meta.get("description", ""),
             "author": meta.get("author", ""),

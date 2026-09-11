@@ -1,14 +1,19 @@
 -- ================================================================
--- watercooling_light_timer.lua — Aqua Core water-cooling RGB timer
+-- watercooling_light_timer.lua — Hydro Light Control (Aqua Core)
 -- @page_id 5
--- @name WaterCoolingLightTimer
+-- @name HydroLightControl
 -- @desc Schedule the BC08-P4 water-cooling ARGB LED to turn off
 --       after a delay (minutes/hours) or at a specific clock time.
---       Uses capability.call for real LED control and system.* for clocks.
+--       Uses capability.call for LED control and system.* for clocks.
 -- ================================================================
 
 local PAGE = 5
-local W, H = claw.display.get_size()
+-- BC08 LCD is fixed at 720x1280 (API_REFERENCE.md §5); there is no
+-- get_size() in the documented API, so the geometry is hardcoded.
+local SCR_W, SCR_H = 720, 1280
+-- Safe widget canvas: Y 58 ~ 1170 (system status bar above, nav bar below)
+local SAFE_TOP = 58
+local SAFE_BOTTOM = 1170
 local PAD = 24
 local GAP = 16
 
@@ -23,13 +28,21 @@ local PURPLE = 0xA855F7
 local PINK = 0xEC4899
 local BLUE = 0x3B82F6
 
--- Native modules
+-- Documented font sizes only: 13, 15, 24, 30, 45
+local FS_SMALL = 13
+local FS_BODY = 15
+local FS_TITLE = 24
+local FS_BIG = 30
+
+-- Native modules (only whitelisted modules may be required)
 local capability = require("capability")
 local json = require("json")
+local storage = require("storage")
 local system = require("system")
+local delay = require("delay")
 
--- Asset paths
-local ASSET_DIR = "F:skills/watercooling_light_timer/assets/"
+-- Asset paths — images live on the /fatfs flash mount
+local ASSET_DIR = "/fatfs/skills/watercooling_light_timer/assets/"
 local ICONS = {
     title = ASSET_DIR .. "title_aqua_core.png",
     power = ASSET_DIR .. "power_btn.png",
@@ -55,10 +68,10 @@ for d = 0, 9 do
 end
 
 local COLORS = {
-    { name = "Cyan", value = CYAN, icon = ICONS.dot_cyan, ball = ASSET_DIR .. "light_ball_cyan.png", rgb = { r = 0, g = 229, b = 255 } },
-    { name = "Pink", value = PINK, icon = ICONS.dot_pink, ball = ASSET_DIR .. "light_ball_pink.png", rgb = { r = 236, g = 72, b = 153 } },
-    { name = "Purple", value = PURPLE, icon = ICONS.dot_purple, ball = ASSET_DIR .. "light_ball_purple.png", rgb = { r = 168, g = 85, b = 247 } },
-    { name = "Blue", value = BLUE, icon = ICONS.dot_blue, ball = ASSET_DIR .. "light_ball_blue.png", rgb = { r = 59, g = 130, b = 246 } },
+    { name = "Cyan", icon = ICONS.dot_cyan, ball = ASSET_DIR .. "light_ball_cyan.png", rgb = { r = 0, g = 229, b = 255 } },
+    { name = "Pink", icon = ICONS.dot_pink, ball = ASSET_DIR .. "light_ball_pink.png", rgb = { r = 236, g = 72, b = 153 } },
+    { name = "Purple", icon = ICONS.dot_purple, ball = ASSET_DIR .. "light_ball_purple.png", rgb = { r = 168, g = 85, b = 247 } },
+    { name = "Blue", icon = ICONS.dot_blue, ball = ASSET_DIR .. "light_ball_blue.png", rgb = { r = 59, g = 130, b = 246 } },
 }
 
 local PRESETS = {
@@ -74,7 +87,7 @@ local DIGIT_H = 78
 local COLON_W = 26
 local TIME_W = 6 * DIGIT_W + 2 * COLON_W
 
--- State file for timer persistence
+-- State file for timer persistence (flash root is /fatfs)
 local STATE_FILE = storage.join_path(storage.get_root_dir(), "skills", "watercooling_light_timer", "state.json")
 
 -- Application state
@@ -94,14 +107,6 @@ local ctx = {
 local timezone_offset_sec = 0
 local timezone_label = "UTC"
 
--- ── Helpers ──
-local function safe_json_decode(str)
-    if type(str) ~= "string" or str == "" then return nil end
-    local ok, data = pcall(json.decode, str)
-    if ok and type(data) == "table" then return data end
-    return nil
-end
-
 -- ── Julian day helpers ──
 local function ymd_to_days(y, m, d)
     local a = math.floor((14 - m) / 12)
@@ -114,11 +119,17 @@ local function time_to_utc_seconds(y, m, d, h, min, s)
     return (ymd_to_days(y, m, d) - ymd_to_days(1970, 1, 1)) * 86400 + h * 3600 + min * 60 + s
 end
 
+-- system.date() returns a local date string "YYYY-MM-DD HH:MM:SS"
+local function parse_local_date()
+    local y, m, d, h, min, s = system.date():match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+    return tonumber(y), tonumber(m), tonumber(d), tonumber(h), tonumber(min), tonumber(s)
+end
+
 -- ── Timezone ──
 local function compute_timezone_offset()
     local now = system.time()
-    local local_t = system.date("*t", now)
-    local local_as_utc = time_to_utc_seconds(local_t.year, local_t.month, local_t.day, local_t.hour, local_t.min, local_t.sec)
+    local y, m, d, h, min, s = parse_local_date()
+    local local_as_utc = time_to_utc_seconds(y, m, d, h, min, s)
     return local_as_utc - now
 end
 
@@ -130,15 +141,13 @@ local function format_offset(seconds)
     return string.format("UTC%s%02d:%02d", sign, h, m)
 end
 
--- ── RGB helpers ──
+-- ── RGB control via capability bus (API_REFERENCE.md §3) ──
 local function apply_rgb()
     if not ctx.light_on then
-        claw.rgb.off()
         capability.call("miner_set_led_mode", { on = false })
         return
     end
     local c = COLORS[ctx.rgb_index]
-    claw.rgb.set(c.value)
     capability.call("miner_set_led_mode", { on = true })
     capability.call("miner_set_led_color", c.rgb)
 end
@@ -160,40 +169,19 @@ local function format_time_hms(total_seconds)
     return string.format("%02d:%02d:%02d", h, m, s)
 end
 
-local function format_time(ts)
-    local t = system.date("*t", ts)
-    return string.format("%02d:%02d", t.hour, t.min)
-end
-
--- ── Persistence ──
-local function json_encode(t)
-    local active_str = t.active and "true" or "false"
-    return string.format(
-        '{"mode":"%s","active":%s,"target_ts":%d,"started_at":%d,"delay_value":%d,"delay_unit":"%s","schedule_hour":%d,"schedule_min":%d}',
-        t.mode, active_str, t.target_ts, t.started_at, t.delay_value, t.delay_unit, t.schedule_hour, t.schedule_min)
-end
-
-local function json_decode(s)
-    local function grab(key)
-        return s:match('"' .. key .. '":"?([^",{}]+)"?')
-    end
-    local mode = grab("mode") or "delay"
-    return {
-        mode = mode,
-        active = grab("active") == "true",
-        target_ts = tonumber(grab("target_ts")) or 0,
-        started_at = tonumber(grab("started_at")) or 0,
-        delay_value = tonumber(grab("delay_value")) or 30,
-        delay_unit = grab("delay_unit") or "minutes",
-        schedule_hour = tonumber(grab("schedule_hour")) or 21,
-        schedule_min = tonumber(grab("schedule_min")) or 0,
-    }
-end
+-- ── Persistence (storage module, pcall-protected) ──
+local PERSIST_KEYS = { "mode", "active", "target_ts", "started_at", "delay_value", "delay_unit", "schedule_hour", "schedule_min" }
 
 local function save_state()
-    local ok, err = pcall(function() storage.write_file(STATE_FILE, json_encode(ctx)) end)
+    local ok, err = pcall(function()
+        local payload = {}
+        for _, k in ipairs(PERSIST_KEYS) do
+            payload[k] = ctx[k]
+        end
+        storage.write_file(STATE_FILE, json.encode(payload))
+    end)
     if not ok then
-        sys.log("warn", "save state failed: " .. tostring(err))
+        print("warn: save state failed: " .. tostring(err))
     end
 end
 
@@ -201,10 +189,11 @@ local function load_state()
     local ok, exists = pcall(storage.exists, STATE_FILE)
     if not ok or not exists then return false end
     local ok_read, content = pcall(storage.read_file, STATE_FILE)
-    if not ok_read or not content then return false end
-    local saved = json_decode(content)
-    for k, v in pairs(saved) do
-        ctx[k] = v
+    if not ok_read or type(content) ~= "string" or content == "" then return false end
+    local ok_dec, saved = pcall(json.decode, content)
+    if not ok_dec or type(saved) ~= "table" then return false end
+    for _, k in ipairs(PERSIST_KEYS) do
+        if saved[k] ~= nil then ctx[k] = saved[k] end
     end
     return true
 end
@@ -212,8 +201,8 @@ end
 -- ── Timer logic ──
 local function compute_schedule_target(hour, min)
     local now = system.time()
-    local local_t = system.date("*t", now)
-    local target_local = time_to_utc_seconds(local_t.year, local_t.month, local_t.day, hour, min, 0)
+    local y, m, d = parse_local_date()
+    local target_local = time_to_utc_seconds(y, m, d, hour, min, 0)
     local target_utc = target_local - timezone_offset_sec
     if target_utc <= now then
         target_utc = target_utc + 24 * 3600
@@ -239,18 +228,20 @@ local function start_timer()
     end
     ctx.active = true
     save_state()
-    sys.log("info", "timer started: mode=" .. ctx.mode)
+    print("timer started: mode=" .. ctx.mode)
 end
 
 local function cancel_timer()
     ctx.active = false
     save_state()
-    sys.log("info", "timer cancelled")
+    print("timer cancelled")
 end
 
 -- ── UI helpers ──
-local function draw_container(x, y, w, h, color, radius, id)
-    claw.display.container(PAGE, id, x, y, w, h, color, radius or 0)
+-- claw.display has no container widget; a button with empty text serves
+-- as a filled background card (API_REFERENCE.md §5 example).
+local function draw_card(x, y, w, h, color, id)
+    claw.display.button(PAGE, id, x, y, w, h, "", color)
 end
 
 local function draw_label(x, y, text, color, size, id)
@@ -285,77 +276,70 @@ end
 
 -- ── Main UI ──
 local function draw_header()
-    local y = 16
+    local y = SAFE_TOP + 8 -- 66, keep clear of the system status bar
     local power_size = 48
-    local title_w = 220
-    local title_h = 44
-    draw_image(PAD, y + 8, ICONS.title, 1, title_w, title_h)
-    -- clickable area behind power icon
-    claw.display.button(PAGE, 10, W - PAD - power_size, y + 10, power_size, power_size, "", BG)
-    draw_image(W - PAD - power_size, y + 10, ICONS.power, 110, power_size, power_size)
-    local tz_size = 18
-    local tz_w = text_width(timezone_label, tz_size)
-    draw_label(W - PAD - power_size - 16 - tz_w, y + 26, timezone_label, SUBTEXT, tz_size, 2)
+    draw_image(PAD, y, ICONS.title, 1, 220, 44)
+    claw.display.button(PAGE, 10, SCR_W - PAD - power_size, y, power_size, power_size, "", BG)
+    draw_image(SCR_W - PAD - power_size, y, ICONS.power, 110, power_size, power_size)
+    local tz_w = text_width(timezone_label, FS_SMALL)
+    draw_label(SCR_W - PAD - power_size - 16 - tz_w, y + 16, timezone_label, SUBTEXT, FS_SMALL, 2)
 end
 
 local function draw_status_card()
-    local y = 90
-    local h = 160
-    draw_container(PAD, y, W - PAD * 2, h, CARD_BG, 20, 100)
+    local y = 128
+    local h = 156
+    draw_card(PAD, y, SCR_W - PAD * 2, h, CARD_BG, 100)
 
     local status_text = ctx.light_on and "LIGHT EFFECT ON" or "LIGHT EFFECT OFF"
-    draw_label(PAD + 24, y + 26, status_text, TEXT, 28, 101)
+    draw_label(PAD + 24, y + 24, status_text, TEXT, FS_BIG, 101)
 
-    local sub_size = 20
-    draw_label(PAD + 24, y + 66, "RGB Flow · ", SUBTEXT, sub_size, 102)
+    draw_label(PAD + 24, y + 68, "RGB Flow · ", SUBTEXT, FS_BODY, 102)
     local color_name = COLORS[ctx.rgb_index].name
-    local prefix_w = text_width("RGB Flow · ", sub_size)
-    draw_label(PAD + 24 + prefix_w, y + 66, color_name, CYAN, sub_size, 103)
+    local prefix_w = text_width("RGB Flow · ", FS_BODY)
+    draw_label(PAD + 24 + prefix_w, y + 68, color_name, CYAN, FS_BODY, 103)
 
-    -- Color dots
+    -- Color dots: selected dot gets a cyan frame behind it
     local dot_size = 48
     local dot_gap = 56
     for i, c in ipairs(COLORS) do
         local dx = PAD + 24 + (i - 1) * dot_gap
         if i == ctx.rgb_index then
-            draw_container(dx - 6, y + 104 - 6, dot_size + 12, dot_size + 12, CYAN, math.floor((dot_size + 12) / 2), 110 + i)
+            draw_card(dx - 6, y + 100 - 6, dot_size + 12, dot_size + 12, CYAN, 110 + i)
         end
-        -- clickable area behind the dot image
-        claw.display.button(PAGE, 20 + i, dx, y + 104, dot_size, dot_size, "", CARD_BG)
-        draw_image(dx, y + 104, c.icon, 120 + i, dot_size, dot_size)
+        claw.display.button(PAGE, 20 + i, dx, y + 100, dot_size, dot_size, "", CARD_BG)
+        draw_image(dx, y + 100, c.icon, 120 + i, dot_size, dot_size)
     end
 
-    local ball_size = 110
-    draw_image(W - PAD - 24 - ball_size, y + (h - ball_size) / 2, COLORS[ctx.rgb_index].ball, 30, ball_size, ball_size)
+    local ball_size = 100
+    draw_image(SCR_W - PAD - 24 - ball_size, y + (h - ball_size) / 2, COLORS[ctx.rgb_index].ball, 30, ball_size, ball_size)
 end
 
 local function draw_mode_switch()
-    local y = 260
+    local y = 296
     local pill_w = 240
     local pill_h = 36
-    local pill_x = math.floor((W - pill_w) / 2)
+    local pill_x = math.floor((SCR_W - pill_w) / 2)
     local half = math.floor(pill_w / 2)
 
-    draw_container(pill_x, y, pill_w, pill_h, STROKE, 10, 200)
+    draw_card(pill_x, y, pill_w, pill_h, STROKE, 200)
 
     local count_active = ctx.mode == "delay"
     claw.display.button(PAGE, 31, pill_x, y, half, pill_h, "", count_active and CYAN or STROKE)
-    draw_label_center(pill_x + half / 2, y + 9, "Timer", count_active and BG or SUBTEXT, 14, 201)
+    draw_label_center(pill_x + half / 2, y + 11, "Timer", count_active and BG or SUBTEXT, FS_SMALL, 201)
 
     local sched_active = ctx.mode == "schedule"
     claw.display.button(PAGE, 33, pill_x + half, y, half, pill_h, "", sched_active and CYAN or STROKE)
-    draw_label_center(pill_x + half + half / 2, y + 9, "Schedule", sched_active and BG or SUBTEXT, 14, 203)
+    draw_label_center(pill_x + half + half / 2, y + 11, "Schedule", sched_active and BG or SUBTEXT, FS_SMALL, 203)
 end
 
 local function draw_ring()
-    local ring_w = 480
-    local ring_h = 480
-    local ring_x = math.floor((W - ring_w) / 2)
-    local ring_y = 315
-    draw_image(ring_x, ring_y, ICONS.ring, 40, ring_w, ring_h)
+    local ring_w = 440
+    local ring_x = math.floor((SCR_W - ring_w) / 2)
+    local ring_y = 340
+    draw_image(ring_x, ring_y, ICONS.ring, 40, ring_w, ring_w)
 
     local cx = ring_x + ring_w / 2
-    local cy = ring_y + ring_h / 2
+    local cy = ring_y + ring_w / 2
 
     local total
     if ctx.active then
@@ -365,9 +349,9 @@ local function draw_ring()
     end
     local time_str = format_time_hms(total)
 
-    draw_label_center(cx, cy - 112, "Turns off in", SUBTEXT, 20, 41)
-    draw_time_images(cx, cy - 46, time_str, 500)
-    draw_label_center(cx, cy + 62, "Hours : Minutes : Seconds", SUBTEXT, 18, 42)
+    draw_label_center(cx, cy - 100, "Turns off in", SUBTEXT, FS_BODY, 41)
+    draw_time_images(cx, cy - 39, time_str, 500)
+    draw_label_center(cx, cy + 55, "Hours : Minutes : Seconds", SUBTEXT, FS_SMALL, 42)
 end
 
 -- ── Schedule mode: wheel picker card ──
@@ -383,18 +367,18 @@ local function draw_wheel_value(box_cx, row_cy, value, selected, id_base)
         draw_image(x, y, ICONS.digit[str:sub(1, 1)], id_base, WHEEL_DIGIT_W, WHEEL_DIGIT_H)
         draw_image(x + WHEEL_DIGIT_W, y, ICONS.digit[str:sub(2, 2)], id_base + 1, WHEEL_DIGIT_W, WHEEL_DIGIT_H)
     else
-        draw_label_center(box_cx, row_cy - 13, str, SUBTEXT, 26, id_base)
+        draw_label_center(box_cx, row_cy - 12, str, SUBTEXT, FS_TITLE, id_base)
     end
 end
 
 local function draw_wheel(box_x, box_y, box_w, box_h, value, max_val, id_base)
-    draw_container(box_x, box_y, box_w, box_h, CARD_BG, 16, id_base)
+    draw_card(box_x, box_y, box_w, box_h, CARD_BG, id_base)
     local box_cx = box_x + box_w / 2
     local row_h = box_h / 5
     -- highlight dividers around the selected (middle) row
     local sel_y = box_y + row_h * 2
-    draw_container(box_x + 20, sel_y, box_w - 40, 2, STROKE, 0, id_base + 10)
-    draw_container(box_x + 20, sel_y + row_h, box_w - 40, 2, STROKE, 0, id_base + 11)
+    draw_card(box_x + 20, sel_y, box_w - 40, 2, STROKE, id_base + 10)
+    draw_card(box_x + 20, sel_y + row_h, box_w - 40, 2, STROKE, id_base + 11)
     for i = -2, 2 do
         local v = (value + i) % max_val
         local row_cy = box_y + row_h * (i + 2) + row_h / 2
@@ -403,17 +387,17 @@ local function draw_wheel(box_x, box_y, box_w, box_h, value, max_val, id_base)
 end
 
 local function draw_schedule_card()
-    local card_y = 320
-    local card_h = 660
-    draw_container(PAD, card_y, W - PAD * 2, card_h, CARD_BG, 20, 300)
+    local card_y = 348
+    local card_h = 632
+    draw_card(PAD, card_y, SCR_W - PAD * 2, card_h, CARD_BG, 300)
 
-    draw_label(PAD + 32, card_y + 34, "SCHEDULE OFF", TEXT, 34, 301)
-    draw_label(PAD + 32, card_y + 82, "Pick a time to power off", CYAN, 20, 302)
+    draw_label(PAD + 32, card_y + 30, "SCHEDULE OFF", TEXT, FS_BIG, 301)
+    draw_label(PAD + 32, card_y + 76, "Pick a time to power off", CYAN, FS_BODY, 302)
 
     -- geometry: [hours box][mid col: ^ : v][minutes box][^ v]
     local box_w = 200
-    local box_h = 340
-    local box_y = card_y + 150
+    local box_h = 330
+    local box_y = card_y + 130
     local hours_x = 70
     local mins_x = 370
     local mid_cx = 320          -- colon + hour chevrons
@@ -421,8 +405,8 @@ local function draw_schedule_card()
     local hours_cx = hours_x + box_w / 2
     local mins_cx = mins_x + box_w / 2
 
-    draw_label_center(hours_cx, box_y - 34, "HOURS", CYAN, 18, 303)
-    draw_label_center(mins_cx, box_y - 34, "MINUTES", CYAN, 18, 304)
+    draw_label_center(hours_cx, box_y - 32, "HOURS", CYAN, FS_SMALL, 303)
+    draw_label_center(mins_cx, box_y - 32, "MINUTES", CYAN, FS_SMALL, 304)
 
     draw_wheel(hours_x, box_y, box_w, box_h, ctx.schedule_hour, 24, 380)
     draw_wheel(mins_x, box_y, box_w, box_h, ctx.schedule_min, 60, 420)
@@ -453,21 +437,21 @@ local function draw_schedule_card()
     local hh = math.floor(diff / 3600)
     local mm = math.floor((diff % 3600) / 60)
     local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
-    draw_label_center(W / 2, card_y + 510, summary, TEXT, 28, 360)
+    draw_label_center(SCR_W / 2, card_y + 492, summary, TEXT, FS_TITLE, 360)
     local sub
     if hh > 0 then
         sub = string.format("in %d hour%s %d min", hh, hh > 1 and "s" or "", mm)
     else
         sub = string.format("in %d min", mm)
     end
-    draw_label_center(W / 2, card_y + 552, sub, SUBTEXT, 18, 361)
+    draw_label_center(SCR_W / 2, card_y + 530, sub, SUBTEXT, FS_BODY, 361)
 
     -- live countdown digits while the timer is running
     if ctx.active then
         local cd = format_time_hms(diff)
         local dw, dh, cw = 26, 39, 13
-        local x = (W - (6 * dw + 2 * cw)) / 2
-        local y = card_y + 585
+        local x = (SCR_W - (6 * dw + 2 * cw)) / 2
+        local y = card_y + 562
         for i = 1, #cd do
             local ch = cd:sub(i, i)
             if ch == ":" then
@@ -485,26 +469,25 @@ local function draw_presets()
     if ctx.mode == "schedule" then return end
     local y = 815
     local h = 64
-    local btn_w = math.floor((W - PAD * 2 - GAP * 3) / 4)
+    local btn_w = math.floor((SCR_W - PAD * 2 - GAP * 3) / 4)
     for i, p in ipairs(PRESETS) do
         local x = PAD + (i - 1) * (btn_w + GAP)
         local is_active = ctx.delay_value == p.value and ctx.delay_unit == p.unit
         local img = is_active and ICONS.preset_active or ICONS.preset_inactive
         local fill = is_active and CYAN or CARD_BG
-        -- clickable button behind the image (separate IDs)
         claw.display.button(PAGE, 410 + i - 1, x, y, btn_w, h, "", fill)
         draw_image(x, y, img, 510 + i - 1, btn_w, h)
-        draw_label_center(x + btn_w / 2, y + 20, p.label, is_active and BG or TEXT, 20, 420 + i - 1)
+        draw_label_center(x + btn_w / 2, y + 22, p.label, is_active and BG or TEXT, FS_BODY, 460 + i - 1)
     end
 end
 
 local function draw_custom_input()
     if ctx.mode == "schedule" then return end
     local y = 895
-    local cx = math.floor(W / 2)
+    local cx = math.floor(SCR_W / 2)
     local btn_size = 84
 
-    -- Countdown: just +/- buttons centered with a divider
+    -- Countdown: +/- buttons centered with a divider
     local spacing = 120
     local btn_inner = 60
     local offset = (btn_size - btn_inner) / 2
@@ -513,17 +496,16 @@ local function draw_custom_input()
     claw.display.button(PAGE, 53, cx + spacing + offset, y + offset, btn_inner, btn_inner, "", CARD_BG)
     draw_image(cx + spacing, y, ICONS.plus, 153, btn_size, btn_size)
     -- subtle vertical divider
-    draw_container(cx - 1, y + 20, 2, btn_size - 40, STROKE, 0, 80)
+    draw_card(cx - 1, y + 20, 2, btn_size - 40, STROKE, 90)
 end
 
 local function draw_footer()
-    local y = 1012
-    draw_label_center(W / 2, y, "LED will turn off automatically", SUBTEXT, 16, 91)
+    draw_label_center(SCR_W / 2, 1006, "LED will turn off automatically", SUBTEXT, FS_SMALL, 91)
 end
 
 local function draw_start_button()
     local y = 1052
-    local w = W - PAD * 2
+    local w = SCR_W - PAD * 2
     local h = 96
     local text
     if ctx.active then
@@ -535,15 +517,14 @@ local function draw_start_button()
     end
     local img = ctx.active and ICONS.stop or ICONS.start
     local text_clr = ctx.active and TEXT or BG
-    -- clickable button behind the image (separate IDs)
     claw.display.button(PAGE, 60, PAD, y, w, h, "", CARD_BG)
     draw_image(PAD, y, img, 160, w, h)
-    draw_label_center(W / 2, y + 32, text, text_clr, 28, 61)
+    draw_label_center(SCR_W / 2, y + 34, text, text_clr, FS_TITLE, 61)
 end
 
 local function draw_ui()
     claw.display.clear_page(PAGE)
-    draw_container(0, 0, W, H, BG, 0, 0)
+    draw_card(0, 0, SCR_W, SCR_H, BG, 0)
 
     draw_header()
     draw_status_card()
@@ -560,16 +541,8 @@ local function draw_ui()
 end
 
 -- ── Event handling ──
+-- Only buttons are touch controls; images and labels are decorative.
 local function handle_touch(obj)
-    -- The topmost element receives the click; images are drawn on top of
-    -- their invisible buttons, so map image ids back to the button ids.
-    if obj == 110 or obj == 160 or obj == 151 or obj == 153
-        or (obj >= 121 and obj <= 124) or (obj >= 510 and obj <= 513) then
-        obj = obj - 100
-    elseif obj >= 351 and obj <= 354 then
-        obj = 80 + (obj - 351)
-    end
-
     if obj == 10 then
         ctx.light_on = not ctx.light_on
         apply_rgb()
@@ -635,13 +608,13 @@ local function check_deadline()
         apply_rgb()
         ctx.active = false
         save_state()
-        sys.log("info", "timer expired, LED off")
+        print("timer expired, LED off")
         draw_ui()
     end
 end
 
 -- ── Entry ──
-claw.display.create_page(PAGE, "AquaCoreLightTimer")
+claw.display.create_page(PAGE, "Hydro Light Control")
 claw.display.clear_page(PAGE)
 
 timezone_offset_sec = compute_timezone_offset()
@@ -652,7 +625,7 @@ apply_rgb()
 check_deadline()
 draw_ui()
 
-sys.log("info", "aqua core timer app ready, timezone=" .. timezone_label)
+print("hydro light control ready, timezone=" .. timezone_label)
 
 while true do
     local p, obj = claw.display.pop_event()
@@ -665,5 +638,6 @@ while true do
         draw_ui()
     end
 
+    -- Yield CPU and feed the watchdog (API_REFERENCE.md §7)
     delay.delay_ms(500)
 end

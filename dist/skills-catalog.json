@@ -1,10 +1,11 @@
 {
-  "generated_at": "2026-09-10T11:44:07Z",
+  "generated_at": "2026-09-11T03:25:17Z",
   "repo": "EdwinSong/hammer-claw-skills-lab",
   "total": 3,
   "skills": [
     {
       "id": "game_minesweeper",
+      "dir": "game_minesweeper",
       "title": "Game MineSweeper",
       "description": "Run a premium animated Minesweeper game on the board LCD with 5x5 grid, multiple levels (1-5), flag mode, explosion ripple animation, and victory celebration screen. Touch-driven with dark-themed LVGL UI.",
       "author": "HammerMiner",
@@ -34,6 +35,7 @@
     },
     {
       "id": "miner_dashboard",
+      "dir": "miner_dashboard",
       "title": "Bitcoin Miner Dashboard",
       "description": "Display a clean, card-based Bitcoin miner dashboard with hashrate, temperature, BTC price, network status, mining config, ASIC config, and system info on the board LCD.",
       "author": "HammerMiner",
@@ -53,8 +55,8 @@
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 34317,
-      "sha256": "bad71a0dee89521c60b42f04e3a5db4b177fe167109f06112745f0cc0e627789",
+      "total_size": 34985,
+      "sha256": "12d49fe9ccfd33940230188b56238af486159b7ce7093e8b70b5eb2ea3737a72",
       "files": [
         "SKILL.md",
         "assets\\asic.png",
@@ -76,6 +78,7 @@
     },
     {
       "id": "hydro_light_control",
+      "dir": "watercooling_light_timer",
       "title": "Hydro Light Control",
       "description": "Schedule the BC08-P4 water-cooling RGB LED to turn off after a delay (minutes or hours) or at a specific clock time. Supports state persistence and shows current timezone. Invoke when the user asks for LED timer, schedule light off, water-cooling RGB shutdown, or turn off the light after a delay.",
       "author": "HammerMiner",
@@ -89,13 +92,14 @@
         "bc08-p4"
       ],
       "peripherals": [
-        "led"
+        "display",
+        "argb_led"
       ],
       "cap_groups": [
         "cap_lua"
       ],
-      "total_size": 165010,
-      "sha256": "4eba4e818d10fc09d1ea2be60ee05fd285bd03f2a3e07021fdcad02530867d4e",
+      "total_size": 165040,
+      "sha256": "b2e0f8906bf0be881c757280541780ad579dd599488a1430de6383f1b3a6a129",
       "files": [
         "SKILL.md",
         "assets\\_debug_stop.png",

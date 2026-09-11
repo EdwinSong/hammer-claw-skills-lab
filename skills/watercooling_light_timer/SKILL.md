@@ -17,7 +17,8 @@
       "timezone"
     ],
     "peripherals": [
-      "led"
+      "display",
+      "argb_led"
     ],
     "cap_groups": [
       "cap_lua"
@@ -47,14 +48,15 @@ Pass an empty `args` object for defaults.
 
 ## Behavior
 
-- Supports two modes: **Delay** and **Clock**.
-- **Delay mode**: enter a number and choose the unit (**Minutes** or **Hours**). Use the **-** / **+** buttons to adjust the value.
-- **Clock mode**: set a target clock time (e.g. 21:00). The skill automatically rolls over to the next day if the time has already passed.
-- Displays the current timezone offset (e.g. `UTC+08:00`) on the top bar.
-- Persists the active timer state to `skills/watercooling_light_timer/state.json`.
+- Supports two modes: **Timer** (countdown) and **Schedule** (clock time).
+- **Timer mode**: pick a preset (**15 min** / **30 min** / **1 hour** / **2 hours**) or adjust the value with the **-** / **+** buttons (1–999, minutes or hours).
+- **Schedule mode**: wheel pickers set the target clock time (hour 0–23, minute 0–59) via the chevron buttons. The skill automatically rolls over to the next day if the time has already passed, and shows a live `HH:MM:SS` countdown below the summary while the timer is running.
+- The power button toggles the ARGB LED immediately via `capability.call("miner_set_led_mode", { on = ... })`; the four color dots apply instantly via `capability.call("miner_set_led_color", { r, g, b })`.
+- Displays the current timezone offset (e.g. `UTC+08:00`) on the top bar, derived from `system.time()` and `system.date()`.
+- Persists the timer state to `/fatfs/skills/watercooling_light_timer/state.json` via the `storage` module (pcall-protected).
 - On launch, restores an unfinished timer if the deadline has not been reached.
-- Calls `claw.rgb.off()` when the deadline is reached and clears the persisted state.
-- The user can press **Cancel** at any time to abort the timer.
+- When the deadline is reached, the LED is turned off via `capability.call("miner_set_led_mode", { on = false })` and the persisted state is cleared.
+- The user can press **Stop Timer** at any time to abort; switching modes or picking a preset also cancels the active timer.
 
 ## Files
 
