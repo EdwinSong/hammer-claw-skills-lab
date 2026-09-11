@@ -256,12 +256,12 @@ local ID_START = 196    -- 196..198: start/stop button
 
 local function draw_header(base)
     local y = SAFE_TOP + 12 -- 70, keep clear of the system status bar
-    local power_size = 48
+    local power_size = 72
     draw_image(PAD, y, ICONS.title, base + 1, 220, 44)
     claw.display.button(PAGE, base + 2, SCR_W - PAD - power_size, y, power_size, power_size, "", BG)
     draw_image(SCR_W - PAD - power_size, y, ICONS.power, base + 3, power_size, power_size)
     local tz_w = text_width(timezone_label, FS_SMALL)
-    draw_label(SCR_W - PAD - power_size - 16 - tz_w, y + 16, timezone_label, SUBTEXT, FS_SMALL, base + 4)
+    draw_label(SCR_W - PAD - power_size - 16 - tz_w, y + 26, timezone_label, SUBTEXT, FS_SMALL, base + 4)
 end
 
 local function draw_mode_switch(base)
@@ -491,59 +491,79 @@ local function draw_ui()
 end
 
 -- ── Event handling ──
--- Only buttons are touch controls; images and labels are decorative.
+-- Buttons are the intended touch targets, but on device images/labels drawn
+-- on top of a button can steal the event. Map those overlay IDs back to the
+-- same action as the button beneath them.
 local function handle_touch(obj)
     print(string.format("handle_touch: obj=%d", obj))
-    if obj == ID_HEADER + 2 then -- power button
+
+    -- Power button (and the power icon image on top of it)
+    if obj == ID_HEADER + 2 or obj == ID_HEADER + 3 then
         ctx.light_on = not ctx.light_on
         print("handle_touch: power toggle light_on=" .. tostring(ctx.light_on))
         apply_rgb()
-    elseif obj == ID_MODE + 1 then -- Timer pill
+
+    -- Timer/Schedule pill button (and labels drawn on top)
+    elseif obj == ID_MODE + 1 or obj == ID_MODE + 2 then
         print("handle_touch: switch to delay mode")
         cancel_timer()
         ctx.mode = "delay"
-    elseif obj == ID_MODE + 3 then -- Schedule pill
+    elseif obj == ID_MODE + 3 or obj == ID_MODE + 4 then
         print("handle_touch: switch to schedule mode")
         cancel_timer()
         ctx.mode = "schedule"
-    elseif obj >= ID_PRESET and obj <= ID_PRESET + 3 then -- preset buttons
-        local p = PRESETS[obj - ID_PRESET + 1]
+
+    -- Preset buttons, their background images, and their labels
+    elseif (obj >= ID_PRESET and obj <= ID_PRESET + 3)
+        or (obj >= ID_PRESET + 4 and obj <= ID_PRESET + 7)
+        or (obj >= ID_PRESET + 8 and obj <= ID_PRESET + 11) then
+        local idx
+        if obj >= ID_PRESET and obj <= ID_PRESET + 3 then idx = obj - ID_PRESET + 1
+        elseif obj >= ID_PRESET + 4 and obj <= ID_PRESET + 7 then idx = obj - (ID_PRESET + 4) + 1
+        else idx = obj - (ID_PRESET + 8) + 1 end
+        local p = PRESETS[idx]
         print("handle_touch: preset " .. p.label)
         cancel_timer()
         ctx.mode = "delay"
         ctx.delay_value = p.value
         ctx.delay_unit = p.unit
-    elseif obj == ID_INPUT then -- minus
+
+    -- Minus/Plus buttons (and the icon images on top)
+    elseif obj == ID_INPUT or obj == ID_INPUT + 1 then
         ctx.delay_value = math.max(1, ctx.delay_value - 1)
         print("handle_touch: delay_value=" .. ctx.delay_value)
-    elseif obj == ID_INPUT + 2 then -- plus
+    elseif obj == ID_INPUT + 2 or obj == ID_INPUT + 3 then
         ctx.delay_value = math.min(999, ctx.delay_value + 1)
         print("handle_touch: delay_value=" .. ctx.delay_value)
-    elseif obj == ID_SCHED + 6 then -- hour up
+
+    -- Schedule chevron buttons (and the chevron icon images on top)
+    elseif obj == ID_SCHED + 6 or obj == ID_SCHED + 7 then -- hour up
         ctx.schedule_hour = (ctx.schedule_hour + 1) % 24
         print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
-    elseif obj == ID_SCHED + 8 then -- hour down
+    elseif obj == ID_SCHED + 8 or obj == ID_SCHED + 9 then -- hour down
         ctx.schedule_hour = (ctx.schedule_hour - 1) % 24
         print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
-    elseif obj == ID_SCHED + 10 then -- minute up
+    elseif obj == ID_SCHED + 10 or obj == ID_SCHED + 11 then -- minute up
         ctx.schedule_min = (ctx.schedule_min + 1) % 60
         print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
-    elseif obj == ID_SCHED + 12 then -- minute down
+    elseif obj == ID_SCHED + 12 or obj == ID_SCHED + 13 then -- minute down
         ctx.schedule_min = (ctx.schedule_min - 1) % 60
         print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
-    elseif obj == ID_START then -- start/stop button
+
+    -- Start/Stop button (and the background image + label on top)
+    elseif obj == ID_START or obj == ID_START + 1 or obj == ID_START + 2 then
         if ctx.active then
             print("handle_touch: stop button")
             cancel_timer()
