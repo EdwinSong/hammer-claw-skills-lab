@@ -75,11 +75,11 @@ local PRESETS = {
     { label = "2 hours", value = 2, unit = "hours" },
 }
 
--- Digital time display sizes
+-- Digital time display sizes (must match native pixel size of digit assets)
 local DIGIT_W = 52
 local DIGIT_H = 78
 local COLON_W = 26
-local TIME_W = 6 * DIGIT_W + 2 * COLON_W
+local TIME_W = 364  -- 6*52 + 2*26, precomputed
 
 -- Application state
 local ctx = {
@@ -257,7 +257,7 @@ local ID_START = 196    -- 196..198: start/stop button
 local function draw_header(base)
     local y = SAFE_TOP + 12 -- 70, keep clear of the system status bar
     local power_size = 72
-    draw_image(PAD, y, ICONS.title, base + 1, 220, 44)
+    draw_image(PAD, y, ICONS.title, base + 1, 280, 44)
     claw.display.button(PAGE, base + 2, SCR_W - PAD - power_size, y, power_size, power_size, "", BG)
     draw_image(SCR_W - PAD - power_size, y, ICONS.power, base + 3, power_size, power_size)
     local tz_w = text_width(timezone_label, FS_SMALL)
@@ -268,28 +268,28 @@ local function draw_mode_switch(base)
     local y = 210
     local pill_w = 360
     local pill_h = 60
-    local pill_x = math.floor((SCR_W - pill_w) / 2)
-    local half = math.floor(pill_w / 2)
+    local pill_x = 180
+    local half = 180
 
     draw_card(pill_x, y, pill_w, pill_h, STROKE, base)
 
     local count_active = ctx.mode == "delay"
     claw.display.button(PAGE, base + 1, pill_x, y, half, pill_h, "", count_active and CYAN or STROKE)
-    draw_label_center(pill_x + half / 2, y + 18, "Timer", count_active and BG or SUBTEXT, FS_TITLE, base + 2)
+    draw_label_center(pill_x + 90, y + 18, "Timer", count_active and BG or SUBTEXT, FS_TITLE, base + 2)
 
     local sched_active = ctx.mode == "schedule"
     claw.display.button(PAGE, base + 3, pill_x + half, y, half, pill_h, "", sched_active and CYAN or STROKE)
-    draw_label_center(pill_x + half + half / 2, y + 18, "Schedule", sched_active and BG or SUBTEXT, FS_TITLE, base + 4)
+    draw_label_center(pill_x + half + 90, y + 18, "Schedule", sched_active and BG or SUBTEXT, FS_TITLE, base + 4)
 end
 
 local function draw_ring(base)
     local ring_w = 440
-    local ring_x = math.floor((SCR_W - ring_w) / 2)
+    local ring_x = 140
     local ring_y = 330
     draw_image(ring_x, ring_y, ICONS.ring, base, ring_w, ring_w)
 
-    local cx = ring_x + ring_w / 2
-    local cy = ring_y + ring_w / 2
+    local cx = 360
+    local cy = 550
 
     local total
     if ctx.active then
@@ -305,15 +305,15 @@ local function draw_ring(base)
 end
 
 -- ── Schedule mode: wheel picker card ──
-local WHEEL_DIGIT_W = 44
-local WHEEL_DIGIT_H = 66
+-- Wheel uses the same digit assets as the main countdown, so sizes must match.
+local WHEEL_DIGIT_W = 52
+local WHEEL_DIGIT_H = 78
 
 local function draw_wheel_value(box_cx, row_cy, value, selected, id_base)
     local str = string.format("%02d", value)
     if selected then
-        local total_w = WHEEL_DIGIT_W * 2
-        local x = box_cx - total_w / 2
-        local y = row_cy - WHEEL_DIGIT_H / 2
+        local x = box_cx - 52
+        local y = row_cy - 39
         draw_image(x, y, ICONS.digit[str:sub(1, 1)], id_base, WHEEL_DIGIT_W, WHEEL_DIGIT_H)
         draw_image(x + WHEEL_DIGIT_W, y, ICONS.digit[str:sub(2, 2)], id_base + 1, WHEEL_DIGIT_W, WHEEL_DIGIT_H)
     else
@@ -323,15 +323,15 @@ end
 
 local function draw_wheel(box_x, box_y, box_w, box_h, value, max_val, id_base)
     draw_card(box_x, box_y, box_w, box_h, CARD_BG, id_base)
-    local box_cx = box_x + box_w / 2
-    local row_h = box_h / 5
+    local box_cx = box_x + 100
+    local row_h = 60
     -- highlight dividers around the selected (middle) row
-    local sel_y = box_y + row_h * 2
+    local sel_y = box_y + 120
     draw_card(box_x + 20, sel_y, box_w - 40, 2, STROKE, id_base + 10)
     draw_card(box_x + 20, sel_y + row_h, box_w - 40, 2, STROKE, id_base + 11)
     for i = -2, 2 do
         local v = (value + i) % max_val
-        local row_cy = box_y + row_h * (i + 2) + row_h / 2
+        local row_cy = box_y + 30 + (i + 2) * row_h
         draw_wheel_value(box_cx, row_cy, v, i == 0, id_base + 20 + (i + 2) * 2)
     end
 end
@@ -352,8 +352,8 @@ local function draw_schedule_card(base)
     local mins_x = 370
     local mid_cx = 320          -- colon + hour chevrons
     local right_cx = 610        -- minute chevrons
-    local hours_cx = hours_x + box_w / 2
-    local mins_cx = mins_x + box_w / 2
+    local hours_cx = 170
+    local mins_cx = 470
 
     draw_label_center(hours_cx, box_y - 32, "HOURS", CYAN, FS_SMALL, base + 3)
     draw_label_center(mins_cx, box_y - 32, "MINUTES", CYAN, FS_SMALL, base + 4)
@@ -361,9 +361,9 @@ local function draw_schedule_card(base)
     draw_wheel(hours_x, box_y, box_w, box_h, ctx.schedule_hour, 24, ID_WHEEL_H)
     draw_wheel(mins_x, box_y, box_w, box_h, ctx.schedule_min, 60, ID_WHEEL_M)
 
-    -- colon between selected rows
-    local sel_cy = box_y + box_h / 2
-    draw_image(mid_cx - 10, sel_cy - 30, ICONS.digit_colon, base + 5, 20, 60)
+    -- colon between selected rows (native digit_colon size is 26x78)
+    local sel_cy = box_y + 150
+    draw_image(mid_cx - 13, sel_cy - 39, ICONS.digit_colon, base + 5, COLON_W, DIGIT_H)
 
     -- hour chevrons (middle column)
     local chev = 56
@@ -399,17 +399,16 @@ local function draw_schedule_card(base)
     -- live countdown digits while the timer is running
     if ctx.active then
         local cd = format_time_hms(diff)
-        local dw, dh, cw = 26, 39, 13
-        local x = (SCR_W - (6 * dw + 2 * cw)) / 2
+        local x = 178  -- (720 - 364) / 2, precomputed
         local y = card_y + 500
         for i = 1, #cd do
             local ch = cd:sub(i, i)
             if ch == ":" then
-                draw_image(x, y, ICONS.digit_colon, base + 15 + i, cw, dh)
-                x = x + cw
+                draw_image(x, y, ICONS.digit_colon, base + 15 + i, COLON_W, DIGIT_H)
+                x = x + COLON_W
             else
-                draw_image(x, y, ICONS.digit[ch], base + 15 + i, dw, dh)
-                x = x + dw
+                draw_image(x, y, ICONS.digit[ch], base + 15 + i, DIGIT_W, DIGIT_H)
+                x = x + DIGIT_W
             end
         end
     end
@@ -419,7 +418,7 @@ local function draw_presets(base)
     if ctx.mode == "schedule" then return end
     local y = 790
     local h = 64
-    local btn_w = math.floor((SCR_W - PAD * 2 - GAP * 3) / 4)
+    local btn_w = 144
     for i, p in ipairs(PRESETS) do
         local x = PAD + (i - 1) * (btn_w + GAP)
         local is_active = ctx.delay_value == p.value and ctx.delay_unit == p.unit
@@ -427,20 +426,20 @@ local function draw_presets(base)
         local fill = is_active and CYAN or CARD_BG
         claw.display.button(PAGE, base + i - 1, x, y, btn_w, h, "", fill)
         draw_image(x, y, img, base + 4 + i - 1, btn_w, h)
-        draw_label_center(x + btn_w / 2, y + 22, p.label, is_active and BG or TEXT, FS_BODY, base + 8 + i - 1)
+        draw_label_center(x + 72, y + 22, p.label, is_active and BG or TEXT, FS_BODY, base + 8 + i - 1)
     end
 end
 
 local function draw_custom_input(base)
     if ctx.mode == "schedule" then return end
     local y = 865
-    local cx = math.floor(SCR_W / 2)
+    local cx = 360
     local btn_size = 84
 
     -- Countdown: +/- buttons centered with a divider
     local spacing = 120
     local btn_inner = 60
-    local offset = (btn_size - btn_inner) / 2
+    local offset = 12
     claw.display.button(PAGE, base, cx - spacing - btn_size + offset, y + offset, btn_inner, btn_inner, "", CARD_BG)
     draw_image(cx - spacing - btn_size, y, ICONS.minus, base + 1, btn_size, btn_size)
     claw.display.button(PAGE, base + 2, cx + spacing + offset, y + offset, btn_inner, btn_inner, "", CARD_BG)
@@ -455,8 +454,9 @@ end
 
 local function draw_start_button(base)
     local y = 1000
-    local w = SCR_W - PAD * 2
+    local w = 670  -- matches native size of start_btn.png / stop_btn.png
     local h = 90
+    local x = 25   -- (720 - 670) / 2, centered
     local text
     if ctx.active then
         text = "Stop Timer"
@@ -467,9 +467,9 @@ local function draw_start_button(base)
     end
     local img = ctx.active and ICONS.stop or ICONS.start
     local text_clr = ctx.active and TEXT or BG
-    claw.display.button(PAGE, base, PAD, y, w, h, "", CARD_BG)
-    draw_image(PAD, y, img, base + 1, w, h)
-    draw_label_center(SCR_W / 2, y + 34, text, text_clr, FS_TITLE, base + 2)
+    claw.display.button(PAGE, base, x, y, w, h, "", CARD_BG)
+    draw_image(x, y, img, base + 1, w, h)
+    draw_label_center(360, y + 34, text, text_clr, FS_TITLE, base + 2)
 end
 
 local function draw_ui()
