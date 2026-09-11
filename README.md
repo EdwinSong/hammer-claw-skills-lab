@@ -287,7 +287,6 @@ hammer-claw-skills-lab/
 │   ├── miner_dashboard/          # Bitcoin miner dashboard
 │   └── watercooling_light_timer/ # Water cooling light & timer
 ├── API_REFERENCE.md              # Complete BC08 telemetry & hardware control API reference
-├── bc08_lua_api_reference.md     # Lua API reference for BC08 device
 ├── bc08_lua_sandbox_design.md    # Lua sandbox design for BC08 device
 ```
 

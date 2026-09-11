@@ -1,13 +1,13 @@
 -- ================================================================
 -- watercooling_light_timer.lua — Hydro Light Control (Aqua Core)
--- @page_id 5
+-- @page_id 7
 -- @name HydroLightControl
 -- @desc Schedule the BC08-P4 water-cooling ARGB LED to turn off
 --       after a delay (minutes/hours) or at a specific clock time.
 --       Uses capability.call for LED control and system.* for clocks.
 -- ================================================================
 
-local PAGE = 5
+local PAGE = 7
 -- BC08 LCD is fixed at 720x1280 (API_REFERENCE.md §5); there is no
 -- get_size() in the documented API, so the geometry is hardcoded.
 local SCR_W, SCR_H = 720, 1280

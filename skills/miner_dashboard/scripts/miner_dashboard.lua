@@ -13,7 +13,7 @@ local json = require("json")
 local system = require("system")
 local delay = require("delay")
 
-local PAGE = 5
+local PAGE = 6
 
 -- 720x1280 portrait LCD. Keep every widget inside the safe canvas:
 -- Y 58..1170 (system status bar above, navigation bar below).
