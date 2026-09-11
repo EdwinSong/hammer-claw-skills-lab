@@ -203,13 +203,13 @@ end
 -- ── UI helpers ──
 -- claw.display has no container widget; a button with empty text serves
 -- as a filled background card (API_REFERENCE.md §5 example).
--- All coordinates are precomputed integers so we don't call math.floor here.
+-- Device requires integer coordinates; math.floor is the single choke point.
 local function draw_card(x, y, w, h, color, id)
-    claw.display.button(PAGE, id, x, y, w, h, "", color)
+    claw.display.button(PAGE, id, math.floor(x), math.floor(y), math.floor(w), math.floor(h), "", color)
 end
 
 local function draw_label(x, y, text, color, size, id)
-    claw.display.label(PAGE, id, x, y, text, color, size)
+    claw.display.label(PAGE, id, math.floor(x), math.floor(y), text, color, size)
 end
 
 local function text_width(text, size)
@@ -217,11 +217,14 @@ local function text_width(text, size)
 end
 
 local function draw_label_center(cx, y, text, color, size, id)
-    draw_label(cx - #text * size / 2, y, text, color, size, id)
+    -- Device label x is the left edge; we center by subtracting half the
+    -- estimated full width. text_width returns the full width, so dividing
+    -- by 2 again gives the left offset for a centered label.
+    draw_label(cx - text_width(text, size) / 2, y, text, color, size, id)
 end
 
 local function draw_image(x, y, path, id, w, h)
-    claw.display.image(PAGE, id, x, y, w or 48, h or (w or 48), path)
+    claw.display.image(PAGE, id, math.floor(x), math.floor(y), w or 48, h or (w or 48), path)
 end
 
 local function draw_time_images(cx, y, time_str, id_start)
