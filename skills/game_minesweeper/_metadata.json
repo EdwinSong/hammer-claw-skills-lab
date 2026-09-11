@@ -1,0 +1,8 @@
+{
+  "extra_files": {
+    "scripts": [
+      "bomb.png",
+      "game_minesweeper.lua"
+    ]
+  }
+}

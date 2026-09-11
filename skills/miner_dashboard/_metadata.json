@@ -1,0 +1,22 @@
+{
+  "extra_files": {
+    "assets": [
+      "asic.png",
+      "btc.png",
+      "freq.png",
+      "gear.png",
+      "hashrate.png",
+      "network.png",
+      "pass.png",
+      "pool.png",
+      "status.png",
+      "temp.png",
+      "volt.png",
+      "wifi.png",
+      "worker.png"
+    ],
+    "scripts": [
+      "miner_dashboard.lua"
+    ]
+  }
+}

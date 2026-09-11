@@ -1,17 +1,16 @@
 ---
 {
-  "name": "hydro_light_control",
+  "name": "watercooling_light_timer",
   "description": "Schedule the BC08-P4 water-cooling RGB LED to turn off after a delay (minutes or hours) or at a specific clock time. Supports state persistence and shows current timezone. Invoke when the user asks for LED timer, schedule light off, water-cooling RGB shutdown, or turn off the light after a delay.",
   "author": "HammerMiner",
   "metadata": {
     "category": [
       "utility",
-      "hardware"
+      "rgb"
     ],
     "tags": [
       "watercooling",
       "rgb",
-      "led",
       "timer",
       "schedule",
       "timezone"
