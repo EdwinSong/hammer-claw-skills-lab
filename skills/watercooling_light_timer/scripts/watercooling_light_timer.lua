@@ -87,8 +87,8 @@ local ctx = {
     rgb_index = 1,
     mode = "delay",
     active = false,
-    target_ts = 0,
-    started_at = 0,
+    target_ts_ms = 0,
+    started_at_ms = 0,
     delay_value = 30,
     delay_unit = "minutes",
     schedule_hour = 21,
@@ -163,35 +163,37 @@ local function format_time_hms(total_seconds)
 end
 
 -- ── Timer logic ──
-local function compute_schedule_target(hour, min)
-    local now = system.time()
+-- Returns target time in milliseconds (system.millis() basis)
+local function compute_schedule_target_ms(hour, min)
+    local now_ms = system.millis()
     local y, m, d = parse_local_date()
     local target_local = time_to_utc_seconds(y, m, d, hour, min, 0)
     local target_utc = target_local - timezone_offset_sec
-    if target_utc <= now then
-        target_utc = target_utc + 24 * 3600
+    local target_ms = target_utc * 1000
+    if target_ms <= now_ms then
+        target_ms = target_ms + 24 * 3600 * 1000
     end
-    return target_utc
+    return target_ms
 end
 
 local function get_remaining_seconds()
     if not ctx.active then return 0 end
-    local now = system.time()
-    print(string.format("[hydro][DEBUG] get_remaining_seconds: now=%d", now))
     if ctx.mode == "delay" then
-        return (ctx.started_at + math.floor(get_delay_duration_ms() / 1000)) - now
+        local elapsed_ms = system.millis() - ctx.started_at_ms
+        return math.max(0, math.floor((get_delay_duration_ms() - elapsed_ms) / 1000))
     else
-        return ctx.target_ts - now
+        local remaining_ms = ctx.target_ts_ms - system.millis()
+        return math.max(0, math.floor(remaining_ms / 1000))
     end
 end
 
 local function start_timer()
     if ctx.mode == "delay" then
-        ctx.started_at = system.time()
+        ctx.started_at_ms = system.millis()
         print(string.format("timer started: delay mode value=%d unit=%s", ctx.delay_value, ctx.delay_unit))
     else
-        ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
-        print(string.format("timer started: schedule target_ts=%d", ctx.target_ts))
+        ctx.target_ts_ms = compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
+        print(string.format("timer started: schedule target_ts_ms=%d", ctx.target_ts_ms))
     end
     ctx.active = true
 end
@@ -384,11 +386,11 @@ local function draw_schedule_card(base)
     draw_image(right_cx - chev / 2, box_y + box_h - chev + 8, ICONS.chevron_down, base + 13, chev, chev)
 
     -- summary
-    local target = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+    local target_ms = compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
     if ctx.active then
-        target = ctx.target_ts
+        target_ms = ctx.target_ts_ms
     end
-    local diff = math.max(0, target - system.time())
+    local diff = math.max(0, math.floor((target_ms - system.millis()) / 1000))
     local hh = math.floor(diff / 3600)
     local mm = math.floor((diff % 3600) / 60)
     local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
@@ -520,8 +522,8 @@ end
 
 local function redraw_schedule_countdown()
     if ctx.mode ~= "schedule" then return end
-    local target = ctx.active and ctx.target_ts or compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
-    local diff = math.max(0, target - system.time())
+    local target_ms = ctx.active and ctx.target_ts_ms or compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
+    local diff = math.max(0, math.floor((target_ms - system.millis()) / 1000))
     local cd = format_time_hms(diff)
     local x = 178
     local y = 760 + 500
@@ -601,28 +603,28 @@ local function handle_touch(obj)
         ctx.schedule_hour = (ctx.schedule_hour + 1) % 24
         print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
-            ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+            ctx.target_ts_ms = compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
         end
         draw_ui()
     elseif obj == ID_SCHED + 8 or obj == ID_SCHED + 9 then -- hour down
         ctx.schedule_hour = (ctx.schedule_hour - 1) % 24
         print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
-            ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+            ctx.target_ts_ms = compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
         end
         draw_ui()
     elseif obj == ID_SCHED + 10 or obj == ID_SCHED + 11 then -- minute up
         ctx.schedule_min = (ctx.schedule_min + 1) % 60
         print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
-            ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+            ctx.target_ts_ms = compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
         end
         draw_ui()
     elseif obj == ID_SCHED + 12 or obj == ID_SCHED + 13 then -- minute down
         ctx.schedule_min = (ctx.schedule_min - 1) % 60
         print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
-            ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+            ctx.target_ts_ms = compute_schedule_target_ms(ctx.schedule_hour, ctx.schedule_min)
         end
         draw_ui()
 
