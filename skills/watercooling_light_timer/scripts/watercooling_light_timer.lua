@@ -177,6 +177,7 @@ end
 local function get_remaining_seconds()
     if not ctx.active then return 0 end
     local now = system.time()
+    print(string.format("[hydro][DEBUG] get_remaining_seconds: now=%d", now))
     if ctx.mode == "delay" then
         return (ctx.started_at + math.floor(get_delay_duration_ms() / 1000)) - now
     else
@@ -290,10 +291,10 @@ local function draw_ring(base)
     local ring_w = 440
     local ring_x = 140
     local ring_y = 330
-    draw_image(ring_x, ring_y, ICONS.ring, base, ring_w, ring_w)
-
     local cx = 360
     local cy = 550
+    -- print(string.format("[hydro][DEBUG] ring: x=%d y=%d w=%d h=%d cx=%d cy=%d", ring_x, ring_y, ring_w, ring_w, cx, cy))
+    draw_image(ring_x, ring_y, ICONS.ring, base, ring_w, ring_w)
 
     local total
     if ctx.active then
@@ -476,11 +477,11 @@ local function draw_start_button(base)
     draw_label_center(360, y + 34, text, text_clr, FS_TITLE, base + 2)
 end
 
+-- ── Full draw (initial / mode switch) ──
 local function draw_ui()
-    print(string.format("draw_ui: mode=%s active=%s light_on=%s rgb_index=%d", ctx.mode, tostring(ctx.active), tostring(ctx.light_on), ctx.rgb_index))
+    print(string.format("[hydro][DEBUG] draw_ui: mode=%s active=%s", ctx.mode, tostring(ctx.active)))
     claw.display.clear_page(PAGE)
     draw_card(0, 0, SCR_W, SCR_H, BG, ID_BG)
-
     draw_header(ID_HEADER)
     draw_mode_switch(ID_MODE)
     if ctx.mode == "schedule" then
@@ -491,6 +492,52 @@ local function draw_ui()
         draw_custom_input(ID_INPUT)
     end
     draw_footer(ID_FOOTER)
+    draw_start_button(ID_START)
+end
+
+-- ── Incremental updates ──
+local function redraw_countdown()
+    if ctx.mode == "schedule" then return end
+    local total
+    if ctx.active then
+        total = get_remaining_seconds()
+    else
+        total = ctx.delay_unit == "hours" and ctx.delay_value * 3600 or ctx.delay_value * 60
+    end
+    local time_str = format_time_hms(total)
+    print(string.format("[hydro][DEBUG] redraw_countdown: total=%d str=%s", total, time_str))
+    local cx = 360
+    local cy = 550
+    draw_label_center(cx, cy - 100, "Turns off in", SUBTEXT, FS_BODY, ID_RING + 1)
+    draw_time_images(cx, cy - 39, time_str, ID_RING + 2)
+    draw_label_center(cx, cy + 55, "Hours : Minutes : Seconds", SUBTEXT, FS_SMALL, ID_RING + 10)
+end
+
+local function redraw_presets()
+    if ctx.mode == "schedule" then return end
+    draw_presets(ID_PRESET)
+end
+
+local function redraw_schedule_countdown()
+    if ctx.mode ~= "schedule" then return end
+    local target = ctx.active and ctx.target_ts or compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
+    local diff = math.max(0, target - system.time())
+    local cd = format_time_hms(diff)
+    local x = 178
+    local y = 760 + 500
+    for i = 1, #cd do
+        local ch = cd:sub(i, i)
+        if ch == ":" then
+            draw_image(x, y, ICONS.digit_colon, ID_SCHED + 15 + i, COLON_W, DIGIT_H)
+            x = x + COLON_W
+        else
+            draw_image(x, y, ICONS.digit[ch], ID_SCHED + 15 + i, DIGIT_W, DIGIT_H)
+            x = x + DIGIT_W
+        end
+    end
+end
+
+local function redraw_start_button()
     draw_start_button(ID_START)
 end
 
@@ -512,10 +559,12 @@ local function handle_touch(obj)
         print("handle_touch: switch to delay mode")
         cancel_timer()
         ctx.mode = "delay"
+        draw_ui()
     elseif obj == ID_MODE + 3 or obj == ID_MODE + 4 then
         print("handle_touch: switch to schedule mode")
         cancel_timer()
         ctx.mode = "schedule"
+        draw_ui()
 
     -- Preset buttons, their background images, and their labels
     elseif (obj >= ID_PRESET and obj <= ID_PRESET + 3)
@@ -531,14 +580,21 @@ local function handle_touch(obj)
         ctx.mode = "delay"
         ctx.delay_value = p.value
         ctx.delay_unit = p.unit
+        redraw_presets()
+        redraw_countdown()
+        redraw_start_button()
 
     -- Minus/Plus buttons (and the icon images on top)
     elseif obj == ID_INPUT or obj == ID_INPUT + 1 then
         ctx.delay_value = math.max(1, ctx.delay_value - 1)
         print("handle_touch: delay_value=" .. ctx.delay_value)
+        redraw_countdown()
+        redraw_presets()
     elseif obj == ID_INPUT + 2 or obj == ID_INPUT + 3 then
         ctx.delay_value = math.min(999, ctx.delay_value + 1)
         print("handle_touch: delay_value=" .. ctx.delay_value)
+        redraw_countdown()
+        redraw_presets()
 
     -- Schedule chevron buttons (and the chevron icon images on top)
     elseif obj == ID_SCHED + 6 or obj == ID_SCHED + 7 then -- hour up
@@ -547,24 +603,28 @@ local function handle_touch(obj)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
+        draw_ui()
     elseif obj == ID_SCHED + 8 or obj == ID_SCHED + 9 then -- hour down
         ctx.schedule_hour = (ctx.schedule_hour - 1) % 24
         print("handle_touch: schedule_hour=" .. ctx.schedule_hour)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
+        draw_ui()
     elseif obj == ID_SCHED + 10 or obj == ID_SCHED + 11 then -- minute up
         ctx.schedule_min = (ctx.schedule_min + 1) % 60
         print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
+        draw_ui()
     elseif obj == ID_SCHED + 12 or obj == ID_SCHED + 13 then -- minute down
         ctx.schedule_min = (ctx.schedule_min - 1) % 60
         print("handle_touch: schedule_min=" .. ctx.schedule_min)
         if ctx.active and ctx.mode == "schedule" then
             ctx.target_ts = compute_schedule_target(ctx.schedule_hour, ctx.schedule_min)
         end
+        draw_ui()
 
     -- Start/Stop button (and the background image + label on top)
     elseif obj == ID_START or obj == ID_START + 1 or obj == ID_START + 2 then
@@ -575,17 +635,17 @@ local function handle_touch(obj)
             print("handle_touch: start button")
             start_timer()
         end
+        draw_ui()
     else
         print("handle_touch: unhandled obj=" .. obj)
     end
-    draw_ui()
 end
 
 -- ── Check deadline ──
 local function check_deadline()
     if not ctx.active then return end
     local remaining = get_remaining_seconds()
-    print(string.format("check_deadline: remaining=%d mode=%s", remaining, ctx.mode))
+    print(string.format("[hydro][DEBUG] check_deadline: remaining=%d mode=%s", remaining, ctx.mode))
     if remaining <= 0 then
         ctx.light_on = false
         apply_rgb()
@@ -596,29 +656,44 @@ local function check_deadline()
 end
 
 -- ── Entry ──
+print("[hydro][INFO] script starting, page=" .. PAGE)
 claw.display.create_page(PAGE, "Hydro Light Control")
 claw.display.clear_page(PAGE)
+print("[hydro][INFO] page created and cleared")
 
 timezone_offset_sec = compute_timezone_offset()
 timezone_label = format_offset(timezone_offset_sec)
+print("[hydro][DEBUG] timezone=" .. timezone_label)
 
 apply_rgb()
+print("[hydro][INFO] rgb applied, light_on=" .. tostring(ctx.light_on))
 check_deadline()
 draw_ui()
+print("[hydro][INFO] ui drawn, mode=" .. ctx.mode .. " active=" .. tostring(ctx.active))
 
 print("hydro light control ready, timezone=" .. timezone_label)
 
+-- ── Main loop ──
+-- Uses short delay for responsive touch and smooth countdown updates.
+-- Timer expiry is checked every iteration via check_deadline().
+local last_tick = system.millis()
+
 while true do
+    -- Handle touch events (non-blocking)
     local p, obj = claw.display.pop_event()
     if p == PAGE and obj then
+        print("[hydro][INFO] touch event, obj=" .. obj)
         handle_touch(obj)
+        print("[hydro][INFO] touch handled")
     end
 
+    -- Update countdown display and check for timer expiry
     if ctx.active then
         check_deadline()
-        draw_ui()
+        redraw_countdown()
+        redraw_schedule_countdown()
     end
 
     -- Yield CPU and feed the watchdog (API_REFERENCE.md §7)
-    delay.delay_ms(500)
+    delay.delay_ms(100)
 end
