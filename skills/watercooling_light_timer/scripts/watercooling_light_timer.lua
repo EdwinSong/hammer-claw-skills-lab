@@ -320,27 +320,71 @@ local WHEEL_DIGIT_H = 78
 local function draw_wheel_value(box_cx, row_cy, value, selected, id_base)
     local str = string.format("%02d", value)
     if selected then
+        -- Selected row: large digit images
         local x = box_cx - 52
         local y = row_cy - 39
         draw_image(x, y, ICONS.digit[str:sub(1, 1)], id_base, WHEEL_DIGIT_W, WHEEL_DIGIT_H)
         draw_image(x + WHEEL_DIGIT_W, y, ICONS.digit[str:sub(2, 2)], id_base + 1, WHEEL_DIGIT_W, WHEEL_DIGIT_H)
     else
+        -- Non-selected rows: smaller text labels
         draw_label_center(box_cx, row_cy - 12, str, SUBTEXT, FS_TITLE, id_base)
     end
 end
 
-local function draw_wheel(box_x, box_y, box_w, box_h, value, max_val, id_base)
+-- Draw wheel background + dividers (called once from draw_schedule_card)
+local function draw_wheel_frame(box_x, box_y, box_w, box_h, id_base)
     draw_card(box_x, box_y, box_w, box_h, CARD_BG, id_base)
-    local box_cx = box_x + 100
-    local row_h = 60
-    -- highlight dividers around the selected (middle) row
     local sel_y = box_y + 120
     draw_card(box_x + 20, sel_y, box_w - 40, 2, STROKE, id_base + 10)
-    draw_card(box_x + 20, sel_y + row_h, box_w - 40, 2, STROKE, id_base + 11)
+    draw_card(box_x + 20, sel_y + 60, box_w - 40, 2, STROKE, id_base + 11)
+end
+
+-- Draw wheel values only (called for incremental updates, same IDs as initial draw)
+local function draw_wheel_values(box_x, box_y, value, max_val, id_base)
+    local box_cx = box_x + 100
+    local row_h = 60
     for i = -2, 2 do
         local v = (value + i) % max_val
         local row_cy = box_y + 30 + (i + 2) * row_h
         draw_wheel_value(box_cx, row_cy, v, i == 0, id_base + 20 + (i + 2) * 2)
+    end
+end
+
+local function draw_wheel(box_x, box_y, box_w, box_h, value, max_val, id_base)
+    draw_wheel_frame(box_x, box_y, box_w, box_h, id_base)
+    draw_wheel_values(box_x, box_y, value, max_val, id_base)
+end
+
+local function draw_schedule_summary(base)
+    local card_y = 330
+    local diff = compute_schedule_remaining_sec(ctx.schedule_hour, ctx.schedule_min)
+    local hh = math.floor(diff / 3600)
+    local mm = math.floor((diff % 3600) / 60)
+    local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
+    draw_label_center(SCR_W / 2, card_y + 430, summary, TEXT, FS_TITLE, base + 14)
+    local sub
+    if hh > 0 then
+        sub = string.format("in %d hour%s %d min", hh, hh > 1 and "s" or "", mm)
+    else
+        sub = string.format("in %d min", mm)
+    end
+    draw_label_center(SCR_W / 2, card_y + 470, sub, SUBTEXT, FS_BODY, base + 15)
+
+    -- live countdown digits while the timer is running
+    if ctx.active then
+        local cd = format_time_hms(diff)
+        local x = 178  -- (720 - 364) / 2, precomputed
+        local y = card_y + 500
+        for i = 1, #cd do
+            local ch = cd:sub(i, i)
+            if ch == ":" then
+                draw_image(x, y, ICONS.digit_colon, base + 15 + i, COLON_W, DIGIT_H)
+                x = x + COLON_W
+            else
+                draw_image(x, y, ICONS.digit[ch], base + 15 + i, DIGIT_W, DIGIT_H)
+                x = x + DIGIT_W
+            end
+        end
     end
 end
 
@@ -390,49 +434,14 @@ local function draw_schedule_card(base)
     draw_schedule_summary(base)
 end
 
-local function draw_schedule_summary(base)
-    local card_y = 330
-    local diff = compute_schedule_remaining_sec(ctx.schedule_hour, ctx.schedule_min)
-    local hh = math.floor(diff / 3600)
-    local mm = math.floor((diff % 3600) / 60)
-    local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
-    draw_label_center(SCR_W / 2, card_y + 430, summary, TEXT, FS_TITLE, base + 14)
-    local sub
-    if hh > 0 then
-        sub = string.format("in %d hour%s %d min", hh, hh > 1 and "s" or "", mm)
-    else
-        sub = string.format("in %d min", mm)
-    end
-    draw_label_center(SCR_W / 2, card_y + 470, sub, SUBTEXT, FS_BODY, base + 15)
-
-    -- live countdown digits while the timer is running
-    if ctx.active then
-        local cd = format_time_hms(diff)
-        local x = 178  -- (720 - 364) / 2, precomputed
-        local y = card_y + 500
-        for i = 1, #cd do
-            local ch = cd:sub(i, i)
-            if ch == ":" then
-                draw_image(x, y, ICONS.digit_colon, base + 15 + i, COLON_W, DIGIT_H)
-                x = x + COLON_W
-            else
-                draw_image(x, y, ICONS.digit[ch], base + 15 + i, DIGIT_W, DIGIT_H)
-                x = x + DIGIT_W
-            end
-        end
-    end
-end
-
--- Incremental: redraw only wheel values + summary (no card, labels, chevrons)
+-- Incremental: redraw wheel values + summary only (frames/chevrons stay untouched)
 local function redraw_schedule_wheel()
     local card_y = 330
-    local box_w = 200
-    local box_h = 300
     local box_y = card_y + 100
     local hours_x = 70
     local mins_x = 370
-    draw_wheel(hours_x, box_y, box_w, box_h, ctx.schedule_hour, 24, ID_WHEEL_H)
-    draw_wheel(mins_x, box_y, box_w, box_h, ctx.schedule_min, 60, ID_WHEEL_M)
+    draw_wheel_values(hours_x, box_y, ctx.schedule_hour, 24, ID_WHEEL_H)
+    draw_wheel_values(mins_x, box_y, ctx.schedule_min, 60, ID_WHEEL_M)
     draw_schedule_summary(ID_SCHED)
 end
 
@@ -576,12 +585,12 @@ local function handle_touch(obj)
         print("handle_touch: switch to delay mode")
         cancel_timer()
         ctx.mode = "delay"
-        draw_ui()
+        draw_ui() -- mode switch requires full redraw (different layout)
     elseif obj == ID_MODE + 3 or obj == ID_MODE + 4 then
         print("handle_touch: switch to schedule mode")
         cancel_timer()
         ctx.mode = "schedule"
-        draw_ui()
+        draw_ui() -- mode switch requires full redraw (different layout)
 
     -- Preset buttons, their background images, and their labels
     elseif (obj >= ID_PRESET and obj <= ID_PRESET + 3)
@@ -640,7 +649,13 @@ local function handle_touch(obj)
             print("handle_touch: start button")
             start_timer()
         end
-        draw_ui()
+        redraw_start_button()
+        -- update countdown display to show running/stopped state
+        if ctx.mode == "delay" then
+            redraw_countdown()
+        else
+            redraw_schedule_wheel()
+        end
     else
         print("handle_touch: unhandled obj=" .. obj)
     end
