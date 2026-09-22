@@ -166,6 +166,7 @@ end
 -- Compares local clock directly, no Unix timestamp conversion needed
 local function compute_schedule_remaining_sec(hour, min)
     local y, m, d, cur_h, cur_min, cur_s = parse_local_date()
+    print(string.format("[hydro][DEBUG] schedule: now=%02d:%02d:%02d target=%02d:%02d", cur_h, cur_min, cur_s, hour, min))
     local target_sec = hour * 3600 + min * 60
     local now_sec = cur_h * 3600 + cur_min * 60 + cur_s
     local diff = target_sec - now_sec
@@ -665,7 +666,7 @@ end
 local function check_deadline()
     if not ctx.active then return end
     local remaining = get_remaining_seconds()
-    print(string.format("[hydro][DEBUG] check_deadline: remaining=%d mode=%s", remaining, ctx.mode))
+    -- print(string.format("[hydro][DEBUG] check_deadline: remaining=%d mode=%s", remaining, ctx.mode))
     if remaining <= 0 then
         ctx.light_on = false
         apply_rgb()
