@@ -364,20 +364,20 @@ local function draw_schedule_summary(base)
     local hh = math.floor(diff / 3600)
     local mm = math.floor((diff % 3600) / 60)
     local summary = string.format("Turn off at %02d:%02d", ctx.schedule_hour, ctx.schedule_min)
-    draw_label_center(SCR_W / 2, card_y + 430, summary, TEXT, FS_TITLE, base + 14)
+    draw_label_center(SCR_W / 2, card_y + 400, summary, TEXT, FS_TITLE, base + 14)
     local sub
     if hh > 0 then
         sub = string.format("in %d hour%s %d min", hh, hh > 1 and "s" or "", mm)
     else
         sub = string.format("in %d min", mm)
     end
-    draw_label_center(SCR_W / 2, card_y + 470, sub, SUBTEXT, FS_BODY, base + 15)
+    draw_label_center(SCR_W / 2, card_y + 440, sub, SUBTEXT, FS_BODY, base + 15)
 
     -- live countdown digits while the timer is running
     if ctx.active then
         local cd = format_time_hms(diff)
         local x = 178  -- (720 - 364) / 2, precomputed
-        local y = card_y + 500
+        local y = card_y + 470
         for i = 1, #cd do
             local ch = cd:sub(i, i)
             if ch == ":" then
@@ -552,7 +552,7 @@ local function redraw_schedule_countdown()
     local diff = compute_schedule_remaining_sec(ctx.schedule_hour, ctx.schedule_min)
     local cd = format_time_hms(diff)
     local x = 178
-    local y = 760 + 500
+    local y = 330 + 470  -- card_y + 470
     for i = 1, #cd do
         local ch = cd:sub(i, i)
         if ch == ":" then
