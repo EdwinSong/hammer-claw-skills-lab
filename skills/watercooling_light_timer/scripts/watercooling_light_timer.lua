@@ -169,10 +169,10 @@ local function compute_schedule_remaining_sec(hour, min)
     -- system.date() returns UTC on device, convert to local time
     local now_sec = cur_h * 3600 + cur_min * 60 + cur_s + timezone_offset_sec
     now_sec = now_sec % (24 * 3600) -- wrap to 0-24h range
-    print(string.format("[hydro][DEBUG] schedule: now=%02d:%02d:%02d target=%02d:%02d", math.floor(now_sec/3600), math.floor((now_sec%3600)/60), now_sec%60, hour, min))
+    -- print(string.format("[hydro][DEBUG] schedule: now=%02d:%02d:%02d target=%02d:%02d", math.floor(now_sec/3600), math.floor((now_sec%3600)/60), now_sec%60, hour, min))
     local target_sec = hour * 3600 + min * 60
     local diff = target_sec - now_sec
-    if diff <= 0 then
+    if diff < 0 then
         diff = diff + 24 * 3600 -- tomorrow
     end
     return diff
@@ -534,7 +534,7 @@ local function redraw_countdown()
         total = ctx.delay_unit == "hours" and ctx.delay_value * 3600 or ctx.delay_value * 60
     end
     local time_str = format_time_hms(total)
-    print(string.format("[hydro][DEBUG] redraw_countdown: total=%d str=%s", total, time_str))
+    --print(string.format("[hydro][DEBUG] redraw_countdown: total=%d str=%s", total, time_str))
     local cx = 360
     local cy = 550
     draw_label_center(cx, cy - 100, "Turns off in", SUBTEXT, FS_BODY, ID_RING + 1)
@@ -694,7 +694,7 @@ check_deadline()
 draw_ui()
 print("[hydro][INFO] ui drawn, mode=" .. ctx.mode .. " active=" .. tostring(ctx.active))
 
-print("hydro light control ready, timezone=" .. timezone_label)
+--print("hydro light control ready, timezone=" .. timezone_label)
 
 -- ── Main loop ──
 -- Uses short delay for responsive touch and smooth countdown updates.
