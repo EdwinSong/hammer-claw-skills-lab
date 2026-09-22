@@ -166,9 +166,11 @@ end
 -- Compares local clock directly, no Unix timestamp conversion needed
 local function compute_schedule_remaining_sec(hour, min)
     local y, m, d, cur_h, cur_min, cur_s = parse_local_date()
-    print(string.format("[hydro][DEBUG] schedule: now=%02d:%02d:%02d target=%02d:%02d", cur_h, cur_min, cur_s, hour, min))
+    -- system.date() returns UTC on device, convert to local time
+    local now_sec = cur_h * 3600 + cur_min * 60 + cur_s + timezone_offset_sec
+    now_sec = now_sec % (24 * 3600) -- wrap to 0-24h range
+    print(string.format("[hydro][DEBUG] schedule: now=%02d:%02d:%02d target=%02d:%02d", math.floor(now_sec/3600), math.floor((now_sec%3600)/60), now_sec%60, hour, min))
     local target_sec = hour * 3600 + min * 60
-    local now_sec = cur_h * 3600 + cur_min * 60 + cur_s
     local diff = target_sec - now_sec
     if diff <= 0 then
         diff = diff + 24 * 3600 -- tomorrow
