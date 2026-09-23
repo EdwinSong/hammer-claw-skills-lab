@@ -46,31 +46,13 @@ def sha256_dir(directory: Path) -> str:
 
 
 def list_files(directory: Path) -> list[str]:
-    """Return relative file paths in a directory (POSIX separators)."""
+    """Return relative file paths in a directory (always POSIX slashes)."""
     return sorted(
         f.relative_to(directory).as_posix()
         for f in directory.rglob("*")
         if f.is_file()
     )
 
-
-def build_extra_files(directory: Path) -> dict[str, list[str]]:
-    """Group skill files by top-level subdirectory for _metadata.json.
-
-    The device downloader fetches SKILL.md, then _metadata.json, then every
-    {group}/{file} entry under the skill root. Root-level files (SKILL.md,
-    preview.png, _metadata.json itself, dev tools) are excluded on purpose.
-    """
-    groups: dict[str, list[str]] = {}
-    for f in sorted(directory.rglob("*")):
-        if not f.is_file():
-            continue
-        rel = f.relative_to(directory)
-        if len(rel.parts) < 2:
-            continue  # root-level file, not part of extra_files
-        group = rel.parts[0]
-        groups.setdefault(group, []).append(rel.as_posix().split("/", 1)[1])
-    return groups
 
 
 def total_size(directory: Path) -> int:
